@@ -14,7 +14,8 @@ import {
   SettingsIcon,
 } from "./icons/NavIcons";
 
-export type ActiveSection = "dashboard" | "notes" | "calendar" | "reminders" | "shared" | "archive";
+export type ActiveSection =
+  "dashboard" | "notes" | "calendar" | "reminders" | "shared" | "archive" | "settings";
 
 const NAV_ITEMS: Array<{
   section: ActiveSection;
@@ -109,7 +110,13 @@ export function AppShell({
         ))}
         <div className="mt-auto flex flex-col items-center gap-1">
           <ThemeToggle className={railLinkClass} />
-          <Link href="/settings" title="Settings" aria-label="Settings" className={railLinkClass}>
+          <Link
+            href="/settings"
+            title="Settings"
+            aria-label="Settings"
+            aria-current={active === "settings" ? "page" : undefined}
+            className={`${railLinkClass} ${active === "settings" ? railLinkActiveClass : ""}`}
+          >
             <SettingsIcon />
           </Link>
           <Link
@@ -153,8 +160,9 @@ export function AppShell({
         })}
         <Link
           href="/settings"
+          aria-current={active === "settings" ? "page" : undefined}
           className={`flex flex-col items-center gap-[3px] rounded-lg px-2.5 py-1 text-[11px] no-underline [&_svg]:h-[19px] [&_svg]:w-[19px] ${
-            active === "dashboard" ? "text-accent" : "text-muted"
+            active === "settings" ? "text-accent" : "text-muted"
           }`}
         >
           <SettingsIcon />
