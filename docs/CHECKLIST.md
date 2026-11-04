@@ -80,7 +80,7 @@ Ordered, structured task list from foundation through MVP. Check items off as th
 
 - [x] Reminder rules (schedule-linked and independent fixed-time) — Note-scoped create/edit/enable/disable/delete is implemented for fixed timestamps and enabled timed schedules
 - [x] Recipient selection scoped to Note's share list — the picker only lists existing shares and the API rejects other user IDs
-- [ ] In-app notification center
+- [x] In-app notification center — user-scoped list, All/Unread filter, cursor paging, per-item and bulk read state
 - [ ] Service worker + Web Push (VAPID)
 - [ ] Reminder due-scan via Vercel Cron, idempotent delivery
 
