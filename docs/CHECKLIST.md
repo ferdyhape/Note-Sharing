@@ -71,7 +71,7 @@ Ordered, structured task list from foundation through MVP. Check items off as th
 
 ## Phase 3 — Scheduling & Calendar
 
-- [ ] Schedule CRUD (date/all-day, timed, range), multiple schedules per Note
+- [x] Schedule CRUD (date/all-day, timed, range), multiple schedules per Note — Note detail panel supports add/edit/enable/disable/delete; browser-verified across all three schedule types, including timezone display and persistence after reload
 - [ ] Recurrence rules (RRULE) + exceptions
 - [ ] Calendar views: month/week/day/agenda
 - [ ] Timezone handling, default Asia/Jakarta
