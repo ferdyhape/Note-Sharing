@@ -62,11 +62,12 @@ Ordered, structured task list from foundation through MVP. Check items off as th
 
 ## Phase 2 — Dynamic properties
 
-- [ ] Property definitions CRUD (all ten types)
-- [ ] Property values with validation
-- [ ] Property value change history (`note_property_value_history`)
-- [ ] Table projection view
-- [ ] Property-based filtering
+- [x] Property definitions CRUD (all ten types) — `GET/POST /api/notes/[id]/properties`, `PATCH/DELETE /api/notes/[id]/properties/[propertyId]`; slug collision handled with a numeric suffix; `createPropertySchema` is a static zod discriminated union, one branch per type (`src/shared/lib/validation/property.ts`)
+- [x] Property values with validation — `PUT /api/notes/[id]/properties/[propertyId]/value`, `validatePropertyValue()` maps each type to its typed column (`src/shared/lib/property-value.ts`); end-to-end verified in browser for TEXT, SELECT, BOOLEAN (debounced text/number saves, immediate select/checkbox saves, reload persists)
+- [x] Property value change history (`note_property_value_history`) — superseded value written in the same `$transaction` as the upsert; `GET .../history`; verified in browser (editing a value then opening History shows the prior value with author + timestamp)
+- [x] Table projection view — `/notes?view=table`, columns are the union of property names across the user's Notes, missing properties render as empty cells (01_PRD.md's table-view rule), verified in browser
+- [x] Property-based filtering — `/notes?view=table&property=<name>&q=<substring>` (plain GET form, no JS), verified both a matching and a non-matching filter in browser
+- [ ] Attachment property type stores metadata only (`valueJson`) — no file upload/object storage yet (known gap, not required for Phase 2)
 
 ## Phase 3 — Scheduling & Calendar
 
