@@ -117,3 +117,28 @@ Design tokens (colors, spacing, typography) are authored as DTCG-format JSON and
 
 - Every schema change is a Prisma migration, committed alongside the code that needs it — never a hand-edited production schema.
 - A property-type or schedule-shape change that could break existing rows needs a migration _preview_ path (per `04_Data_Model_and_ERD.md` §8) before it ships, not just a raw `ALTER`.
+
+## 12. Auth.js Edge/Node split
+
+`src/middleware.ts` runs on Vercel's Edge runtime and must only import `src/shared/lib/auth.config.ts` (the providers list plus `jwt`/`session` callbacks — no Prisma adapter, no bcrypt), via its own `NextAuth(authConfig)` instance. The full config in `src/shared/lib/auth.ts` (Prisma adapter, bcrypt-checking Credentials `authorize()`) is Node-runtime only, used by API routes and Server Components — never import it from `middleware.ts`.
+
+Importing the full config into middleware bundles Prisma's engine and bcryptjs into the Edge Function; this previously pushed it to 1.39 MB against Vercel's 1 MB Hobby-plan limit and failed the deploy. Splitting dropped it to ~328 KB. Any new Auth.js provider or callback: if middleware's route-protection logic needs it, it goes in `auth.config.ts`; if it needs Prisma or any Node-only package, it goes in `auth.ts` only.
+
+## 13. Secrets and environment variables (see also §10)
+
+- Every new local secret file gets its own `git check-ignore -v <file>` check before `git add` — the `.env*` glob in `.gitignore` does not match files like `.neon.env` or `.vapid.env` (don't start with `.env`), and it wrongly catches `.env.example` (un-ignored explicitly with `!.env.example` since that one is meant to be tracked).
+- Never print, `cat`, or `grep` an actual secret value into a terminal, log, or chat. Remap/rename env values via pure redirection (e.g. `sed ... > file`), never through a step that echoes the value back.
+- Neon's dashboard naming is inverted from this project's convention: Neon's `DATABASE_URL_POOLED` → this project's `DATABASE_URL` (pooled, used by the app runtime via `@prisma/adapter-neon`); Neon's `DATABASE_URL` → this project's `DIRECT_URL` (unpooled, used by the CLI/`migrate`). Double-check this mapping any time Neon credentials are rotated or a new branch is created.
+
+## 14. Verification before calling anything done
+
+Every feature/fix, before it's reported complete:
+
+1. `npm run typecheck`
+2. `npm run lint`
+3. `npm run build`
+4. A real browser smoke test for anything touching UI, auth, or middleware — clicking through the actual flow, not just a clean build.
+5. Fix any real bug the smoke test finds.
+6. Update `docs/CHECKLIST.md` and `docs/WORKLOG.md` to reflect only what was actually verified (see `docs/CHECKLIST.md`'s own header) — not work that was merely started or attempted.
+
+Dev/prod currently share one Neon database (see `ADR-0007`). Any account/Note/property created while smoke-testing is throwaway: clean it up immediately afterward (delete the test user's Notes first, then the User — `Note.ownerId` has no cascade-on-delete, so the FK fails if done in the other order).
