@@ -11,9 +11,10 @@ import {
   shiftMonth,
   weekGridDates,
 } from "@/modules/calendar/lib/month-grid";
+import { groupCalendarEventsByDate } from "@/modules/calendar/lib/event-days";
 
 type AgendaEvent = ScheduleOccurrence & { noteTitle: string };
-type CalendarView = "AGENDA" | "WEEK" | "MONTH";
+type CalendarView = "AGENDA" | "DAY" | "WEEK" | "MONTH";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -24,14 +25,6 @@ function displayDate(date: string, locale = "en-ID") {
     month: "long",
     timeZone: "UTC",
   }).format(new Date(`${date}T00:00:00.000Z`));
-}
-
-function eventDate(event: AgendaEvent, timezone: string) {
-  if (event.startDate) return event.startDate;
-  return Temporal.Instant.from(event.startAtUtc!)
-    .toZonedDateTimeISO(timezone)
-    .toPlainDate()
-    .toString();
 }
 
 function eventTime(event: AgendaEvent) {
@@ -126,20 +119,30 @@ export function CalendarAgenda({
   const weekFromDate = weekDates[0]!.toString();
   const weekToDate = weekDates.at(-1)!.toString();
   const toDate =
-    view === "AGENDA" ? shiftDate(fromDate, 13) : view === "WEEK" ? weekToDate : monthToDate;
+    view === "AGENDA"
+      ? shiftDate(fromDate, 13)
+      : view === "DAY"
+        ? selectedDate
+        : view === "WEEK"
+          ? weekToDate
+          : monthToDate;
   const rangeFromDate =
-    view === "AGENDA" ? fromDate : view === "WEEK" ? weekFromDate : monthFromDate;
+    view === "AGENDA"
+      ? fromDate
+      : view === "DAY"
+        ? selectedDate
+        : view === "WEEK"
+          ? weekFromDate
+          : monthFromDate;
   const rangeText =
     view === "AGENDA"
       ? rangeLabel(fromDate, toDate)
-      : view === "WEEK"
-        ? rangeLabel(weekFromDate, weekToDate)
-        : monthLabel(month);
-  const groupedEvents = new Map<string, AgendaEvent[]>();
-  for (const event of events) {
-    const date = eventDate(event, timezone);
-    groupedEvents.set(date, [...(groupedEvents.get(date) ?? []), event]);
-  }
+      : view === "DAY"
+        ? displayDate(selectedDate)
+        : view === "WEEK"
+          ? rangeLabel(weekFromDate, weekToDate)
+          : monthLabel(month);
+  const groupedEvents = groupCalendarEventsByDate(events, rangeFromDate, toDate);
 
   async function loadRange(nextFromDate: string, nextToDate: string) {
     const nextRequestId = ++requestId.current;
@@ -188,6 +191,12 @@ export function CalendarAgenda({
       void loadRange(nextWeekStart, dates.at(-1)!.toString());
       return;
     }
+    if (nextView === "DAY") {
+      setFromDate(anchorDate);
+      setSelectedDate(anchorDate);
+      void loadRange(anchorDate, anchorDate);
+      return;
+    }
     setFromDate(anchorDate);
     setSelectedDate(anchorDate);
     void loadRange(anchorDate, shiftDate(anchorDate, 13));
@@ -207,6 +216,13 @@ export function CalendarAgenda({
       setFromDate(nextWeekStart);
       setSelectedDate(nextWeekStart);
       void loadRange(dates[0]!.toString(), dates.at(-1)!.toString());
+      return;
+    }
+    if (view === "DAY") {
+      const nextDate = shiftDate(selectedDate, direction);
+      setFromDate(nextDate);
+      setSelectedDate(nextDate);
+      void loadRange(nextDate, nextDate);
       return;
     }
 
@@ -229,6 +245,10 @@ export function CalendarAgenda({
     if (view === "WEEK") {
       const dates = weekGridDates(today);
       void loadRange(dates[0]!.toString(), dates.at(-1)!.toString());
+      return;
+    }
+    if (view === "DAY") {
+      void loadRange(today, today);
       return;
     }
     const dates = monthGridDates(today);
@@ -254,7 +274,7 @@ export function CalendarAgenda({
             aria-label="Calendar view"
             className="flex rounded-control border border-control p-0.5"
           >
-            {(["AGENDA", "WEEK", "MONTH"] as const).map((option) => (
+            {(["AGENDA", "DAY", "WEEK", "MONTH"] as const).map((option) => (
               <button
                 key={option}
                 type="button"
@@ -262,7 +282,13 @@ export function CalendarAgenda({
                 onClick={() => changeView(option)}
                 className={`min-h-10 rounded-[4px] px-3 text-[12px] font-medium min-[900px]:min-h-7 ${view === option ? "bg-text text-ground" : "text-muted hover:text-text"}`}
               >
-                {option === "AGENDA" ? "Agenda" : option === "WEEK" ? "Week" : "Month"}
+                {option === "AGENDA"
+                  ? "Agenda"
+                  : option === "DAY"
+                    ? "Day"
+                    : option === "WEEK"
+                      ? "Week"
+                      : "Month"}
               </button>
             ))}
           </div>
@@ -275,9 +301,11 @@ export function CalendarAgenda({
             >
               {view === "AGENDA"
                 ? "Previous"
-                : view === "WEEK"
-                  ? "Previous week"
-                  : "Previous month"}
+                : view === "DAY"
+                  ? "Previous day"
+                  : view === "WEEK"
+                    ? "Previous week"
+                    : "Previous month"}
             </button>
             <button
               type="button"
@@ -293,7 +321,13 @@ export function CalendarAgenda({
               disabled={loading}
               className="min-h-11 rounded-control border border-control px-3 text-[12px] font-medium text-text hover:bg-raised disabled:opacity-60 min-[900px]:min-h-8"
             >
-              {view === "AGENDA" ? "Next" : view === "WEEK" ? "Next week" : "Next month"}
+              {view === "AGENDA"
+                ? "Next"
+                : view === "DAY"
+                  ? "Next day"
+                  : view === "WEEK"
+                    ? "Next week"
+                    : "Next month"}
             </button>
           </nav>
         </div>
@@ -354,6 +388,11 @@ export function CalendarAgenda({
               );
             })}
           </div>
+          <SelectedDayEvents date={selectedDate} events={selectedDayEvents} />
+        </div>
+      )}
+      {!error && view === "DAY" && (
+        <div aria-busy={loading}>
           <SelectedDayEvents date={selectedDate} events={selectedDayEvents} />
         </div>
       )}
