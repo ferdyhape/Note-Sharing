@@ -15,3 +15,10 @@ export type NotificationPage = {
   unreadCount: number;
   nextCursor: string | null;
 };
+
+export type PushDeviceDTO = {
+  id: string;
+  endpointHash: string;
+  userAgent: string | null;
+  lastSeenAt: string | null;
+};
