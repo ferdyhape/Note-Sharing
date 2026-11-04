@@ -57,4 +57,23 @@ describe("groupCalendarEventsByDate", () => {
 
     expect([...grouped.keys()]).toEqual(["2026-11-01"]);
   });
+
+  it("orders all-day events before timed events on the same day", () => {
+    const timed = occurrence({
+      scheduleType: "TIMED",
+      startAtUtc: "2026-11-02T03:00:00Z",
+      startDate: null,
+    });
+    const allDay = occurrence({
+      scheduleType: "ALL_DAY",
+      startDate: "2026-11-02",
+      occurrenceKey: "2026-11-02T00:00:00.000Z",
+    });
+    const grouped = groupCalendarEventsByDate([timed, allDay], "2026-11-02", "2026-11-02");
+
+    expect(grouped.get("2026-11-02")?.map((event) => event.scheduleType)).toEqual([
+      "ALL_DAY",
+      "TIMED",
+    ]);
+  });
 });
