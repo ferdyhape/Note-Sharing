@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notula — Website redesign — Aurora Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#f8f8f8; --surface:#ffffff; --raised:#eeeeee; --border:#e6e6e6; --rule:#f0f0f0; --control:#d4d4d4;
+    --text:#0a0a0a; --muted:#6b6b6b; --accent:#1d5fbf; --accent-ink:#0a0a0a;
+    --positive:#247b50; --negative:#c4242a; --warning:#92400e;
+    --pill-positive-bg:#dcfae5; --pill-positive-ink:#04250e;
+    --pill-negative-bg:#ffedea; --pill-negative-ink:#831c1e;
+    --pill-warning-bg:#fffbeb; --pill-warning-ink:#92400e;
+    --pill-neutral-bg:#eeeeee; --pill-neutral-ink:#3d3d3d;
+    --radius-card:8px; --radius-control:6px; --row-height:44px; --sidebar-width:248px;
+    --gap:12px; --pad:24px; --control-height:36px;
+    --fs-title:24px; --fs-section:16px; --fs-body:14px; --fs-small:12px;
+    --font:"Geist", Inter, system-ui, sans-serif; --mono:"Geist Mono", ui-monospace, monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--font); font-size:var(--fs-body); color:var(--text); background:var(--ground);
+    -webkit-font-smoothing:antialiased;
+  }
+  .num{font-variant-numeric:tabular-nums;}
+  a{color:inherit;}
+  button{font-family:inherit; font-size:inherit; cursor:pointer;}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+
+  /* ---- shell: mobile-first ---- */
+  .topbar{
+    display:flex; align-items:center; gap:12px; height:48px; padding:0 16px;
+    background:var(--ground);
+  }
+  .topbar .menu-btn{
+    width:36px; height:36px; display:grid; place-items:center; background:transparent; border:none; border-radius:var(--radius-control);
+  }
+  .topbar .menu-btn:hover{ background:var(--raised); }
+  .topbar .wordmark{ font-weight:700; font-size:15px; letter-spacing:-0.01em; }
+  .topbar .spacer{ flex:1; }
+  .topbar .icon-btn{ width:36px; height:36px; border:none; background:transparent; border-radius:var(--radius-control); display:grid; place-items:center; color:var(--muted); }
+  .topbar .icon-btn:hover{ background:var(--raised); color:var(--text); }
+
+  .sidebar{ display:none; }
+
+  main.canvas{ padding:16px; }
+  .crumb{ font-size:var(--fs-small); color:var(--muted); margin-bottom:12px; }
+  .crumb a{ text-decoration:none; }
+  .crumb a:hover{ text-decoration:underline; }
+  .crumb .sep{ margin:0 6px; }
+
+  .layout{ display:flex; flex-direction:column; gap:20px; }
+
+  /* note main column */
+  .note-head{ margin-bottom:4px; }
+  .note-head h1{ font-size:var(--fs-title); font-weight:700; margin:0 0 6px; line-height:1.2; }
+  .note-meta{ font-size:var(--fs-small); color:var(--muted); }
+  .note-meta b{ color:var(--text); font-weight:500; }
+
+  .note-body{ margin-top:20px; font-size:15px; line-height:1.6; }
+  .note-body p{ margin:0 0 16px; }
+  .checklist{ list-style:none; margin:0 0 16px; padding:0; display:flex; flex-direction:column; gap:8px; }
+  .checklist li{ display:flex; align-items:flex-start; gap:10px; }
+  .checklist input{ margin-top:3px; width:16px; height:16px; accent-color:var(--accent-ink); }
+  .checklist li.done span{ color:var(--muted); text-decoration:line-through; }
+
+  /* rail */
+  .rail{ display:flex; flex-direction:column; gap:16px; }
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-card); padding:16px; }
+  .card h2{ font-size:13px; font-weight:500; color:var(--muted); margin:0 0 12px; text-transform:none; }
+  .card-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px solid var(--rule); }
+  .card-row:last-child{ border-bottom:none; }
+  .card-row .k{ color:var(--muted); font-size:13px; flex:none; }
+  .card-row .v{ font-size:14px; text-align:right; }
+  .card-row .v.mono{ font-family:var(--mono); font-size:13px; }
+
+  .pill{ display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:500; }
+  .pill-neutral{ background:var(--pill-neutral-bg); color:var(--pill-neutral-ink); }
+  .pill-positive{ background:var(--pill-positive-bg); color:var(--pill-positive-ink); }
+  .pill-dot{ width:6px; height:6px; border-radius:50%; background:var(--accent); display:inline-block; }
+
+  .history-link{ font-size:11px; color:var(--muted); text-decoration:underline; text-underline-offset:2px; background:none; border:none; padding:0; margin-top:2px; display:block; text-align:right; }
+  .history-link:hover{ color:var(--text); }
+
+  .sched-item, .remind-item{ padding:10px 0; border-bottom:1px solid var(--rule); }
+  .sched-item:last-child, .remind-item:last-child{ border-bottom:none; }
+  .sched-item .title, .remind-item .title{ font-size:14px; font-weight:500; margin-bottom:2px; }
+  .sched-item .time, .remind-item .time{ font-size:12px; color:var(--muted); }
+  .sched-item .time .hue, .remind-item .time .hue{ color:var(--accent); font-weight:500; }
+  .tag-recurring{ font-size:11px; color:var(--muted); background:var(--raised); padding:1px 6px; border-radius:4px; margin-left:6px; }
+
+  .share-row{ display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--rule); }
+  .share-row:last-child{ border-bottom:none; }
+  .avatar{ width:28px; height:28px; border-radius:50%; background:var(--raised); display:grid; place-items:center; font-size:12px; font-weight:500; color:var(--text); flex:none; }
+  .share-name{ font-size:13px; flex:1; }
+  .share-role{ font-size:11px; color:var(--muted); }
+
+  .add-btn{ width:100%; margin-top:12px; height:32px; border-radius:var(--radius-control); border:1px dashed var(--control); background:transparent; color:var(--muted); font-size:13px; }
+  .add-btn:hover{ border-color:var(--text); color:var(--text); }
+
+  .actions-row{ display:flex; gap:8px; margin-top:16px; }
+  .btn{ height:var(--control-height); padding:0 16px; border-radius:var(--radius-control); font-size:13px; font-weight:500; border:1px solid transparent; }
+  .btn-primary{ background:var(--accent-ink); color:#fff; }
+  .btn-primary:hover{ background:#000; }
+  .btn-secondary{ background:var(--raised); color:var(--text); border-color:var(--control); }
+  .btn-secondary:hover{ background:#e2e2e2; }
+
+  /* desktop */
+  @media (min-width:900px){
+    body{ display:flex; }
+    .topbar{ display:none; }
+    .sidebar{
+      display:flex; flex-direction:column; width:var(--sidebar-width); flex:none; height:100vh; position:sticky; top:0;
+      padding:20px 12px; border-right:1px solid var(--rule);
+    }
+    .sidebar .brand{ display:flex; align-items:center; gap:8px; padding:4px 8px 20px; }
+    .sidebar .brand .mark{ width:24px; height:24px; border-radius:6px; background:var(--accent-ink); color:#fff; display:grid; place-items:center; font-size:13px; font-weight:700; }
+    .sidebar .brand .name{ font-weight:700; font-size:15px; letter-spacing:-0.01em; }
+    .sidebar .scope{ font-size:12px; color:var(--muted); padding:0 8px 16px; }
+    .nav-group-label{ font-size:12px; color:var(--muted); padding:8px 8px 6px; }
+    .nav{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
+    .nav a{ display:flex; align-items:center; gap:10px; height:34px; padding:0 8px; border-radius:8px; text-decoration:none; font-size:14px; color:var(--text); }
+    .nav a:hover{ background:var(--raised); }
+    .nav a.active{ background:#e9e9e9; }
+    .nav .icon{ width:16px; height:16px; flex:none; opacity:.7; }
+    .nav-bottom{ margin-top:auto; display:flex; align-items:center; gap:8px; padding:10px 8px; border-top:1px solid var(--rule); }
+    .nav-bottom .avatar{ width:28px; height:28px; }
+    .nav-bottom .who{ font-size:13px; }
+    .nav-bottom .who small{ display:block; color:var(--muted); font-size:11px; }
+
+    main.canvas{ flex:1; padding:36px 48px; max-width:1180px; }
+    .layout{ flex-direction:row; align-items:flex-start; gap:48px; }
+    .note-main{ flex:1; min-width:0; max-width:680px; }
+    .rail{ width:360px; flex:none; }
+    .note-body{ font-size:16px; }
+  }
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <button class="menu-btn" aria-label="Open menu">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <span class="wordmark">Notula</span>
+    <span class="spacer"></span>
+    <button class="icon-btn" aria-label="Share note">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11 5a2 2 0 1 0-1.94-2.5L5.9 4.6a2 2 0 1 0 0 2.8l3.16 2.1a2 2 0 1 0 .6-1.3L6.5 6.1a2 2 0 0 0 0-.2l3.16-2.1c.33.2.72.3 1.13.3.17 0 .34-.02.5-.06L11 5Z" fill="currentColor"/></svg>
+    </button>
+  </header>
+
+  <aside class="sidebar">
+    <div class="brand"><span class="mark">N</span><span class="name">Notula</span></div>
+    <div class="scope">Ferdy's workspace</div>
+    <div class="nav-group-label">Workspace</div>
+    <ul class="nav">
+      <li><a href="#"><svg class="icon" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 6.5h13" stroke="currentColor" stroke-width="1.3"/></svg>Dashboard</a></li>
+      <li><a href="#" class="active"><svg class="icon" viewBox="0 0 16 16" fill="none"><path d="M3 2.5h8l2 2v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.3"/><path d="M5 7h6M5 9.5h6M5 12h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>All Notes</a></li>
+      <li><a href="#"><svg class="icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Calendar</a></li>
+      <li><a href="#"><svg class="icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 5.5V8.5l2 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M6 1.5h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Reminders</a></li>
+      <li><a href="#"><svg class="icon" viewBox="0 0 16 16" fill="none"><circle cx="5" cy="4" r="2" stroke="currentColor" stroke-width="1.3"/><circle cx="11" cy="12" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M6.6 5.2 9.4 10.8" stroke="currentColor" stroke-width="1.3"/></svg>Shared with me</a></li>
+      <li><a href="#"><svg class="icon" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3" width="13" height="3" rx="1" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 6v6.5a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V6" stroke="currentColor" stroke-width="1.3"/><path d="M6.5 8.5h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Archive</a></li>
+    </ul>
+    <div class="nav-group-label">General</div>
+    <ul class="nav">
+      <li><a href="#"><svg class="icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.3"/><path d="M8 2.3v1.6M8 12.1v1.6M13.7 8h-1.6M3.9 8H2.3M12.1 3.9l-1.1 1.1M5 9.9l-1.1 1.1M12.1 12.1l-1.1-1.1M5 6.1 3.9 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Settings</a></li>
+    </ul>
+    <div class="nav-bottom">
+      <span class="avatar">F</span>
+      <span class="who">Ferdy Pradana<small>ferdy@notula.app</small></span>
+    </div>
+  </aside>
+
+  <main class="canvas">
+    <nav class="crumb" aria-label="Breadcrumb"><a href="#">All Notes</a><span class="sep">/</span>Website redesign — Aurora Studio</nav>
+
+    <div class="layout">
+      <article class="note-main">
+        <div class="note-head">
+          <h1>Website redesign — Aurora Studio</h1>
+          <div class="note-meta">Owned by <b>Ferdy Pradana</b> · created 2 Nov · updated <b>today, 09:14</b></div>
+        </div>
+
+        <div class="note-body">
+          <p>Kickoff call went well. Aurora wants a warmer palette than their current site and a faster checkout flow. Sketches due before the design review.</p>
+          <ul class="checklist">
+            <li class="done"><input type="checkbox" checked disabled><span>Share mood board</span></li>
+            <li class="done"><input type="checkbox" checked disabled><span>Confirm sitemap with Nadia</span></li>
+            <li><input type="checkbox" disabled><span>Finish homepage wireframe</span></li>
+            <li><input type="checkbox" disabled><span>Send updated timeline</span></li>
+          </ul>
+          <p>Budget approved for phase 1. Watch scope creep on the product filtering request — flagged as phase 2.</p>
+        </div>
+
+        <div class="actions-row">
+          <button class="btn btn-secondary">Add property</button>
+          <button class="btn btn-secondary">Add schedule</button>
+        </div>
+      </article>
+
+      <aside class="rail">
+        <div class="card">
+          <h2>Properties</h2>
+          <div class="card-row"><span class="k">Status</span><span class="v"><span class="pill pill-neutral"><span class="pill-dot"></span>In progress</span></span></div>
+          <div class="card-row"><span class="k">Client</span><span class="v">Nadia Putri</span></div>
+          <div class="card-row">
+            <span class="k">Retainer fee</span>
+            <span class="v">Rp 8.500.000<br><button class="history-link">edited 3× · history</button></span>
+          </div>
+          <div class="card-row"><span class="k">Contract signed</span><span class="v">Yes</span></div>
+          <div class="card-row"><span class="k">Proposal</span><span class="v mono">aurorastudio.com/…</span></div>
+          <div class="card-row"><span class="k">Kickoff date</span><span class="v">2 Nov 2026</span></div>
+          <button class="add-btn">+ Add property</button>
+        </div>
+
+        <div class="card">
+          <h2>Schedule</h2>
+          <div class="sched-item">
+            <div class="title">Design review call</div>
+            <div class="time">Tue 11 Nov · <span class="hue">14:00–14:45</span> WIB</div>
+          </div>
+          <div class="sched-item">
+            <div class="title">Weekly sync<span class="tag-recurring">weekly</span></div>
+            <div class="time">Every Monday · 10:00–10:30 WIB</div>
+          </div>
+          <button class="add-btn">+ Add schedule</button>
+        </div>
+
+        <div class="card">
+          <h2>Reminders</h2>
+          <div class="remind-item">
+            <div class="title">30 min before Design review call</div>
+            <div class="time">Tue 11 Nov · <span class="hue">13:30</span> WIB</div>
+          </div>
+          <div class="remind-item">
+            <div class="title">Send invoice</div>
+            <div class="time">1 Dec · 09:00 WIB · not linked to a schedule</div>
+          </div>
+          <button class="add-btn">+ Add reminder</button>
+        </div>
+
+        <div class="card">
+          <h2>Shared with</h2>
+          <div class="share-row"><span class="avatar">F</span><span class="share-name">Ferdy Pradana (you)</span><span class="share-role">Owner</span></div>
+          <div class="share-row"><span class="avatar">N</span><span class="share-name">Nadia Putri</span><span class="share-role">Editor</span></div>
+          <div class="share-row"><span class="avatar">D</span><span class="share-name">Deni (Finance)</span><span class="share-role">Viewer</span></div>
+          <button class="add-btn">+ Invite</button>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+</body>
+</html>

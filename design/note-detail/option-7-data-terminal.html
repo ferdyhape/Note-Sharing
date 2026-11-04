@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notula — Website redesign — Aurora Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#171719; --surface:#131217; --raised:#212023; --border:#222224; --rule:#1b1a1f; --control:#3a3a3e;
+    --text:#ffffff; --muted:#8a8c92; --accent:#4a8ad6;
+    --positive:#44a282; --negative:#e5566f; --warning:#d9a441;
+    --pill-neutral-bg:#212023; --pill-neutral-ink:#bdbdc0;
+    --radius-card:6px; --radius-control:999px; --rail-width:56px;
+    --gap:24px; --pad:32px; --control-height:34px;
+    --fs-title:26px; --fs-section:20px; --fs-body:13px; --fs-small:12px;
+    --font:"Public Sans", Inter, system-ui, sans-serif; --mono:"IBM Plex Mono", ui-monospace, monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{ font-family:var(--font); font-size:var(--fs-body); color:var(--text); background:var(--ground); -webkit-font-smoothing:antialiased; }
+  .num, .mono{font-variant-numeric:tabular-nums; font-family:var(--mono);}
+  a{color:inherit;}
+  button{font-family:inherit; font-size:inherit; cursor:pointer;}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+
+  .topbar{ display:flex; align-items:center; gap:12px; height:52px; padding:0 16px; border-bottom:1px solid var(--rule); }
+  .topbar .menu-btn{ width:36px; height:36px; display:grid; place-items:center; background:transparent; border:none; border-radius:999px; color:var(--text); }
+  .topbar .menu-btn:hover{ background:var(--raised); }
+  .topbar .wordmark{ font-weight:600; font-size:15px; }
+  .topbar .spacer{ flex:1; }
+  .topbar .icon-btn{ width:36px; height:36px; border:none; background:transparent; border-radius:999px; display:grid; place-items:center; color:var(--muted); }
+  .topbar .icon-btn:hover{ background:var(--raised); color:var(--text); }
+
+  .rail{ display:none; }
+  main.canvas{ padding:16px; }
+  .crumb{ font-size:var(--fs-small); color:var(--muted); margin-bottom:14px; }
+  .crumb a{ text-decoration:none; }
+  .crumb a:hover{ color:var(--text); }
+  .crumb .sep{ margin:0 6px; }
+
+  .layout{ display:flex; flex-direction:column; gap:22px; }
+
+  .note-head h1{ font-size:19px; font-weight:600; margin:0 0 6px; line-height:1.3; }
+  .note-meta{ font-size:var(--fs-small); color:var(--muted); }
+  .note-meta b{ color:var(--text); font-weight:500; }
+
+  .note-body{ margin-top:18px; font-size:14px; line-height:1.6; color:#e6e6e7; }
+  .note-body p{ margin:0 0 14px; }
+  .checklist{ list-style:none; margin:0 0 14px; padding:0; display:flex; flex-direction:column; gap:8px; }
+  .checklist li{ display:flex; align-items:flex-start; gap:10px; }
+  .checklist input{ margin-top:3px; width:15px; height:15px; accent-color:var(--accent); }
+  .checklist li.done span{ color:var(--muted); text-decoration:line-through; }
+
+  .side{ display:flex; flex-direction:column; gap:16px; }
+  .panel{ background:var(--surface); border-radius:var(--radius-card); padding:18px; box-shadow:0 12px 28px rgba(0,0,0,.2); }
+  .panel h2{ font-size:13px; font-weight:500; color:var(--muted); margin:0 0 12px; text-transform:none; }
+  .row{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--rule); }
+  .row:last-child{ border-bottom:none; }
+  .row .k{ color:var(--muted); font-size:13px; flex:none; }
+  .row .v{ font-size:13px; text-align:right; }
+
+  .pill{ display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:500; background:var(--pill-neutral-bg); color:var(--pill-neutral-ink); }
+  .pill .bar{ width:10px; height:2px; background:var(--accent); display:inline-block; }
+
+  .history-link{ font-size:11px; color:var(--muted); text-decoration:underline; text-underline-offset:2px; background:none; border:none; padding:0; margin-top:2px; display:block; text-align:right; font-family:var(--font); }
+  .history-link:hover{ color:var(--text); }
+
+  .sched-item, .remind-item{ padding:10px 0; border-bottom:1px solid var(--rule); }
+  .sched-item:last-child, .remind-item:last-child{ border-bottom:none; }
+  .sched-item .title, .remind-item .title{ font-size:13px; font-weight:500; margin-bottom:3px; font-family:var(--font); }
+  .sched-item .time, .remind-item .time{ font-size:12px; color:var(--muted); }
+  .sched-item .time .hue, .remind-item .time .hue{ color:var(--text); border-bottom:1px solid var(--accent); }
+  .tag-recurring{ font-size:11px; color:var(--muted); background:var(--raised); padding:1px 6px; border-radius:4px; margin-left:6px; font-family:var(--font); }
+
+  .share-row{ display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--rule); }
+  .share-row:last-child{ border-bottom:none; }
+  .avatar{ width:26px; height:26px; border-radius:50%; background:var(--raised); display:grid; place-items:center; font-size:11px; font-weight:600; color:var(--text); flex:none; font-family:var(--font); }
+  .share-name{ font-size:13px; flex:1; font-family:var(--font); }
+  .share-role{ font-size:11px; color:var(--muted); font-family:var(--font); }
+
+  .add-btn{ width:100%; margin-top:10px; height:30px; border-radius:var(--radius-control); border:1px dashed var(--control); background:transparent; color:var(--muted); font-size:12px; font-family:var(--font); }
+  .add-btn:hover{ border-color:var(--text); color:var(--text); }
+
+  .actions-row{ display:flex; gap:8px; margin-top:16px; }
+  .btn{ height:var(--control-height); padding:0 16px; border-radius:999px; font-size:13px; font-weight:500; border:1px solid var(--control); background:transparent; color:var(--text); font-family:var(--font); }
+  .btn:hover{ background:var(--raised); }
+  .btn-primary{ background:#ffffff; color:#0b0b0d; border-color:#fff; font-weight:600; }
+  .btn-primary:hover{ background:#eaeaea; }
+
+  @media (min-width:900px){
+    body{ display:flex; }
+    .topbar{ display:none; }
+    .rail{
+      display:flex; flex-direction:column; align-items:center; width:var(--rail-width); flex:none; height:100vh; position:sticky; top:0;
+      padding:16px 0; border-right:1px solid var(--rule); gap:4px;
+    }
+    .rail .mark{ width:30px; height:30px; border-radius:8px; background:var(--accent); color:#0b1a2c; display:grid; place-items:center; font-size:14px; font-weight:700; margin-bottom:18px; }
+    .rail a{ width:36px; height:36px; display:grid; place-items:center; border-radius:8px; color:var(--muted); text-decoration:none; position:relative; }
+    .rail a:hover{ color:var(--text); background:var(--raised); }
+    .rail a.active{ color:var(--accent); }
+    .rail .gap{ height:18px; }
+    .rail .bottom{ margin-top:auto; }
+    .rail svg{ width:17px; height:17px; }
+
+    main.canvas{ flex:1; padding:32px 40px; max-width:1320px; }
+    .layout{ flex-direction:row; align-items:flex-start; gap:40px; }
+    .note-main{ flex:1; min-width:0; }
+    .note-body{ max-width:640px; }
+    .side{ width:380px; flex:none; }
+  }
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <button class="menu-btn" aria-label="Open menu">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 5h14M2 9h14M2 13h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <span class="wordmark">Notula</span>
+    <span class="spacer"></span>
+    <button class="icon-btn" aria-label="Share note">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="5" cy="4" r="2" stroke="currentColor" stroke-width="1.3"/><circle cx="11" cy="12" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M6.6 5.2 9.4 10.8" stroke="currentColor" stroke-width="1.3"/></svg>
+    </button>
+  </header>
+
+  <nav class="rail" aria-label="Primary">
+    <span class="mark">N</span>
+    <a href="#" title="Dashboard" aria-label="Dashboard"><svg viewBox="0 0 16 16" fill="none"><rect x="1.5" y="1.5" width="13" height="13" rx="3" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 6.5h13" stroke="currentColor" stroke-width="1.3"/></svg></a>
+    <a href="#" class="active" title="All Notes" aria-label="All Notes" aria-current="page"><svg viewBox="0 0 16 16" fill="none"><path d="M3 2.5h8l2 2v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.3"/><path d="M5 7h6M5 9.5h6M5 12h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></a>
+    <a href="#" title="Calendar" aria-label="Calendar"><svg viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></a>
+    <a href="#" title="Reminders" aria-label="Reminders"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 5.5V8.5l2 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></a>
+    <div class="gap"></div>
+    <a href="#" title="Shared with me" aria-label="Shared with me"><svg viewBox="0 0 16 16" fill="none"><circle cx="5" cy="4" r="2" stroke="currentColor" stroke-width="1.3"/><circle cx="11" cy="12" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M6.6 5.2 9.4 10.8" stroke="currentColor" stroke-width="1.3"/></svg></a>
+    <a href="#" title="Archive" aria-label="Archive"><svg viewBox="0 0 16 16" fill="none"><rect x="1.5" y="3" width="13" height="3" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2.5 6v6.5a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V6" stroke="currentColor" stroke-width="1.3"/></svg></a>
+    <div class="bottom">
+      <a href="#" title="Settings" aria-label="Settings"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.3"/><path d="M8 2.3v1.6M8 12.1v1.6M13.7 8h-1.6M3.9 8H2.3M12.1 3.9l-1.1 1.1M5 9.9l-1.1 1.1M12.1 12.1l-1.1-1.1M5 6.1 3.9 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></a>
+      <a href="#" title="Ferdy Pradana"><span class="avatar">F</span></a>
+    </div>
+  </nav>
+
+  <main class="canvas">
+    <nav class="crumb" aria-label="Breadcrumb"><a href="#">All Notes</a><span class="sep">/</span>Website redesign — Aurora Studio</nav>
+
+    <div class="layout">
+      <article class="note-main">
+        <div class="note-head">
+          <h1>Website redesign — Aurora Studio</h1>
+          <div class="note-meta">Owned by <b>Ferdy Pradana</b> · created <span class="mono">2026-11-02</span> · updated <span class="mono">2026-11-04 09:14</span></div>
+        </div>
+
+        <div class="note-body">
+          <p>Kickoff call went well. Aurora wants a warmer palette than their current site and a faster checkout flow. Sketches due before the design review.</p>
+          <ul class="checklist">
+            <li class="done"><input type="checkbox" checked disabled><span>Share mood board</span></li>
+            <li class="done"><input type="checkbox" checked disabled><span>Confirm sitemap with Nadia</span></li>
+            <li><input type="checkbox" disabled><span>Finish homepage wireframe</span></li>
+            <li><input type="checkbox" disabled><span>Send updated timeline</span></li>
+          </ul>
+          <p>Budget approved for phase 1. Watch scope creep on the product filtering request, flagged as phase 2.</p>
+        </div>
+
+        <div class="actions-row">
+          <button class="btn btn-primary">Share note</button>
+          <button class="btn">Add property</button>
+        </div>
+      </article>
+
+      <aside class="side">
+        <div class="panel">
+          <h2>Properties</h2>
+          <div class="row"><span class="k">Status</span><span class="v"><span class="pill"><span class="bar"></span>In progress</span></span></div>
+          <div class="row"><span class="k">Client</span><span class="v">Nadia Putri</span></div>
+          <div class="row"><span class="k">Retainer fee</span><span class="v mono">Rp 8.500.000<br><button class="history-link">edited 3× · history</button></span></div>
+          <div class="row"><span class="k">Contract signed</span><span class="v">Yes</span></div>
+          <div class="row"><span class="k">Proposal</span><span class="v mono">aurorastudio.com/…</span></div>
+          <div class="row"><span class="k">Kickoff date</span><span class="v mono">2026-11-02</span></div>
+          <button class="add-btn">+ Add property</button>
+        </div>
+
+        <div class="panel">
+          <h2>Schedule</h2>
+          <div class="sched-item">
+            <div class="title">Design review call</div>
+            <div class="time mono">2026-11-11 · <span class="hue">14:00–14:45</span></div>
+          </div>
+          <div class="sched-item">
+            <div class="title">Weekly sync<span class="tag-recurring">weekly</span></div>
+            <div class="time mono">Mon · 10:00–10:30</div>
+          </div>
+          <button class="add-btn">+ Add schedule</button>
+        </div>
+
+        <div class="panel">
+          <h2>Reminders</h2>
+          <div class="remind-item">
+            <div class="title">30 min before Design review call</div>
+            <div class="time mono">2026-11-11 · <span class="hue">13:30</span></div>
+          </div>
+          <div class="remind-item">
+            <div class="title">Send invoice</div>
+            <div class="time mono">2026-12-01 · 09:00 · no schedule</div>
+          </div>
+          <button class="add-btn">+ Add reminder</button>
+        </div>
+
+        <div class="panel">
+          <h2>Shared with</h2>
+          <div class="share-row"><span class="avatar">F</span><span class="share-name">Ferdy Pradana (you)</span><span class="share-role">Owner</span></div>
+          <div class="share-row"><span class="avatar">N</span><span class="share-name">Nadia Putri</span><span class="share-role">Editor</span></div>
+          <div class="share-row"><span class="avatar">D</span><span class="share-name">Deni (Finance)</span><span class="share-role">Viewer</span></div>
+          <button class="add-btn">+ Invite</button>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+</body>
+</html>
