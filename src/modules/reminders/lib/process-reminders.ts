@@ -3,6 +3,7 @@ import { Prisma, type NotificationDeliveryStatus } from "@prisma/client";
 import { expandScheduleOccurrences } from "@/modules/scheduling/lib/occurrences";
 import { reminderDeliveryKey } from "@/modules/reminders/lib/delivery-key";
 import { isReminderTriggerDue, scheduleReminderWindow } from "@/modules/reminders/lib/due-window";
+import { nextReminderBatchCursor, REMINDER_SCAN_BATCH_SIZE } from "@/modules/reminders/lib/batches";
 import { sendWebPush } from "@/modules/notifications/lib/send-web-push";
 import { prisma } from "@/shared/lib/prisma";
 import { getUpstashRedis } from "@/shared/lib/upstash";
@@ -15,6 +16,9 @@ const reminderScanInclude = {
   },
   schedule: { include: { recurrence: { include: { exceptions: true } } } },
 } satisfies Prisma.ReminderInclude;
+
+const FIXED_CURSOR_KEY = "notula:cron:fixed-reminder-cursor";
+const SCHEDULE_CURSOR_KEY = "notula:cron:schedule-reminder-cursor";
 
 type ReminderForScan = Prisma.ReminderGetPayload<{ include: typeof reminderScanInclude }>;
 type ReminderRecipientForScan = ReminderForScan["recipients"][number];
@@ -271,6 +275,15 @@ export async function processDueReminders(now = new Date()): Promise<ScanSummary
     remindersFailed: 0,
   };
 
+  const storedFixedCursor = await redis.get<string>(FIXED_CURSOR_KEY);
+  const fixedCursor = storedFixedCursor
+    ? ((
+        await prisma.reminder.findUnique({
+          where: { id: storedFixedCursor },
+          select: { id: true },
+        })
+      )?.id ?? null)
+    : null;
   const fixedReminders = await prisma.reminder.findMany({
     where: {
       enabled: true,
@@ -278,8 +291,9 @@ export async function processDueReminders(now = new Date()): Promise<ScanSummary
       fixedTriggerAt: { lte: now },
       note: { is: { deletedAt: null } },
     },
-    orderBy: { fixedTriggerAt: "asc" },
-    take: 200,
+    orderBy: { id: "asc" },
+    take: REMINDER_SCAN_BATCH_SIZE,
+    ...(fixedCursor ? { cursor: { id: fixedCursor }, skip: 1 } : {}),
     include: reminderScanInclude,
   });
 
@@ -304,6 +318,19 @@ export async function processDueReminders(now = new Date()): Promise<ScanSummary
     }
   }
 
+  const nextFixedCursor = nextReminderBatchCursor(fixedReminders.map((reminder) => reminder.id));
+  if (nextFixedCursor) await redis.set(FIXED_CURSOR_KEY, nextFixedCursor);
+  else await redis.del(FIXED_CURSOR_KEY);
+
+  const storedScheduleCursor = await redis.get<string>(SCHEDULE_CURSOR_KEY);
+  const scheduleCursor = storedScheduleCursor
+    ? ((
+        await prisma.reminder.findUnique({
+          where: { id: storedScheduleCursor },
+          select: { id: true },
+        })
+      )?.id ?? null)
+    : null;
   const scheduleReminders = await prisma.reminder.findMany({
     where: {
       enabled: true,
@@ -316,8 +343,9 @@ export async function processDueReminders(now = new Date()): Promise<ScanSummary
         },
       },
     },
-    orderBy: { createdAt: "asc" },
-    take: 200,
+    orderBy: { id: "asc" },
+    take: REMINDER_SCAN_BATCH_SIZE,
+    ...(scheduleCursor ? { cursor: { id: scheduleCursor }, skip: 1 } : {}),
     include: reminderScanInclude,
   });
 
@@ -355,6 +383,12 @@ export async function processDueReminders(now = new Date()): Promise<ScanSummary
       summary.remindersFailed += 1;
     }
   }
+
+  const nextScheduleCursor = nextReminderBatchCursor(
+    scheduleReminders.map((reminder) => reminder.id),
+  );
+  if (nextScheduleCursor) await redis.set(SCHEDULE_CURSOR_KEY, nextScheduleCursor);
+  else await redis.del(SCHEDULE_CURSOR_KEY);
 
   return summary;
 }

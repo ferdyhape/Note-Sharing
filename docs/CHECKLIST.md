@@ -42,7 +42,7 @@ Ordered, structured task list from foundation through MVP. Check items off as th
 - [x] Note detail screen (editor + properties + schedule + reminder + sharing) built standalone, 10 direction options compared, merged into `design/note-detail/final-notula.html` (dark/light toggle)
 - [x] Design tokens drafted (DTCG JSON) extracted from `final-notula.html` (`src/shared/design-tokens/`)
 - [x] `final-notula.html` approved as the visual baseline (icon-rail shell, row-based tidy layout, hemat accent, light/dark toggle)
-- [ ] Remaining core screens (Calendar, standalone Reminders list, Dashboard/All Notes) designed just-in-time within the phase that builds them, not upfront
+- [x] Remaining core screens (Calendar, standalone Reminders list, Dashboard/All Notes) built just-in-time within their phases
 
 ## Phase 1 — Notes foundation
 
@@ -50,7 +50,7 @@ Ordered, structured task list from foundation through MVP. Check items off as th
   - [x] Auth.js wired (`src/shared/lib/auth.ts`): Credentials (bcrypt) + Google providers, Prisma adapter, JWT sessions, `trustHost` for Vercel
   - [x] `POST /api/auth/register` (email+password sign-up), validated via shared `src/shared/lib/validation/auth.ts`
   - [x] Sign-in / sign-up pages (`src/app/login`, `src/app/register`)
-  - [ ] Google OAuth exercised end-to-end (local `.env` still has empty `GOOGLE_CLIENT_ID`/`SECRET` — only set in Vercel so far; credentials path is verified)
+  - [ ] Google OAuth exercised end-to-end (local client credentials are present, but a real Google account/consent flow has not been run)
   - [x] `NEXTAUTH_SECRET`/`NEXTAUTH_URL` set in Vercel
 - [x] Private Note CRUD — end-to-end verified: create → edit title+body → autosave → reload persists → shows in list
   - [x] `GET/POST /api/notes`, `GET/PATCH/DELETE /api/notes/[id]` — ownership + share-role checked before every read (`src/shared/lib/note-access.ts`), DELETE is owner-only, soft delete via `deletedAt`
@@ -67,7 +67,7 @@ Ordered, structured task list from foundation through MVP. Check items off as th
 - [x] Property value change history (`note_property_value_history`) — superseded value written in the same `$transaction` as the upsert; `GET .../history`; verified in browser (editing a value then opening History shows the prior value with author + timestamp)
 - [x] Table projection view — `/notes?view=table`, columns are the union of property names across the user's Notes, missing properties render as empty cells (01_PRD.md's table-view rule), verified in browser
 - [x] Property-based filtering — `/notes?view=table&property=<name>&q=<substring>` (plain GET form, no JS), verified both a matching and a non-matching filter in browser
-- [ ] Attachment property type stores metadata only (`valueJson`) — no file upload/object storage yet (known gap, not required for Phase 2)
+- [ ] Attachment property type stores metadata only (`valueJson`) — no file upload/object storage yet; R2/S3 credentials are not configured locally
 
 ## Phase 3 — Scheduling & Calendar
 
