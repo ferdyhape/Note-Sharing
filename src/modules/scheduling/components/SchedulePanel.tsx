@@ -1,29 +1,15 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { ScheduleType } from "@prisma/client";
+import { RecurrenceEditor } from "@/modules/scheduling/components/RecurrenceEditor";
+import type { ScheduleDTO } from "@/modules/scheduling/types";
 import {
   formatScheduleDate,
   formatScheduleTime,
   instantToLocalDateTime,
   schedulePayloadFromDraft,
 } from "@/modules/scheduling/lib/schedule-time";
-
-type ScheduleDateFields = {
-  startAtUtc: string | null;
-  endAtUtc: string | null;
-  startDate: string | null;
-  endDate: string | null;
-};
-
-export type ScheduleDTO = ScheduleDateFields & {
-  id: string;
-  noteId: string;
-  scheduleType: ScheduleType;
-  timezone: string;
-  enabled: boolean;
-  createdAt: string;
-};
+import type { ScheduleType } from "@prisma/client";
 
 type ScheduleDraft = {
   scheduleType: ScheduleType;
@@ -344,6 +330,18 @@ export function SchedulePanel({
                   {schedule.timezone}
                   {!schedule.enabled && " · Disabled"}
                 </p>
+                <RecurrenceEditor
+                  noteId={noteId}
+                  schedule={schedule}
+                  canEdit={canEdit}
+                  onChanged={(recurrence) =>
+                    setSchedules((current) =>
+                      current.map((item) =>
+                        item.id === schedule.id ? { ...item, recurrence } : item,
+                      ),
+                    )
+                  }
+                />
               </div>
               {canEdit && (
                 <div className="flex flex-wrap items-center gap-1">

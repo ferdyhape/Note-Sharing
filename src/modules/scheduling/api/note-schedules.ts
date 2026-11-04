@@ -8,6 +8,7 @@ import {
   resolveScheduleTimezone,
   toScheduleFields,
 } from "@/shared/lib/schedule";
+import { recurrenceStartDate, recurrenceStartsAt } from "@/modules/scheduling/lib/recurrence";
 
 type CollectionRouteParams = { params: Promise<{ id: string }> };
 type ItemRouteParams = { params: Promise<{ id: string; scheduleId: string }> };
@@ -28,6 +29,7 @@ export async function GET(_request: Request, { params }: CollectionRouteParams) 
   const schedules = await prisma.noteSchedule.findMany({
     where: { noteId },
     orderBy: { createdAt: "desc" },
+    include: { recurrence: true },
   });
 
   return apiData(schedules);
@@ -52,6 +54,7 @@ export async function POST(request: Request, { params }: CollectionRouteParams) 
   const timezone = resolveScheduleTimezone(parsed.data.timezone, userTimezone);
   const schedule = await prisma.noteSchedule.create({
     data: { noteId, ...toScheduleFields({ ...parsed.data, timezone }) },
+    include: { recurrence: true },
   });
 
   return apiData(schedule, { status: 201 });
@@ -84,15 +87,39 @@ export async function PATCH(request: Request, { params }: ItemRouteParams) {
     );
   }
 
-  const schedule = await prisma.noteSchedule.update({
-    where: { id: scheduleId },
-    data: {
-      ...toScheduleFields({
-        ...parsedSchedule.data,
-        timezone: parsedSchedule.data.timezone ?? existing.timezone,
-      }),
-      ...(enabled === undefined ? {} : { enabled }),
-    },
+  const recurrence = await prisma.recurrenceRule.findUnique({ where: { scheduleId } });
+  const scheduleFields = toScheduleFields({
+    ...parsedSchedule.data,
+    timezone: parsedSchedule.data.timezone ?? existing.timezone,
+  });
+  const updatedStartDate = recurrenceStartDate({ ...existing, ...scheduleFields });
+  if (
+    recurrence?.untilDate &&
+    recurrence.untilDate.toISOString().slice(0, 10) < updatedStartDate.toString()
+  ) {
+    return apiError(
+      "invalid_input",
+      "Schedule start must not be after its recurrence end date.",
+      400,
+    );
+  }
+
+  const schedule = await prisma.$transaction(async (transaction) => {
+    const updatedSchedule = await transaction.noteSchedule.update({
+      where: { id: scheduleId },
+      data: { ...scheduleFields, ...(enabled === undefined ? {} : { enabled }) },
+      include: { recurrence: true },
+    });
+    const updatedRecurrence = recurrence
+      ? await transaction.recurrenceRule.update({
+          where: { id: recurrence.id },
+          data: {
+            timezone: updatedSchedule.timezone,
+            startsAt: recurrenceStartsAt(updatedSchedule),
+          },
+        })
+      : null;
+    return { ...updatedSchedule, recurrence: updatedRecurrence };
   });
 
   return apiData(schedule);

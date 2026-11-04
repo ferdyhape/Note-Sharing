@@ -7,7 +7,8 @@ import { AppShell } from "@/shared/components/AppShell";
 import { NoteEditorClient } from "@/shared/components/NoteEditorClient";
 import { PropertiesPanel, type PropertyDTO } from "@/shared/components/PropertiesPanel";
 import { canEdit } from "@/shared/lib/note-access";
-import { SchedulePanel, type ScheduleDTO } from "@/modules/scheduling/components/SchedulePanel";
+import { SchedulePanel } from "@/modules/scheduling/components/SchedulePanel";
+import type { ScheduleDTO } from "@/modules/scheduling/types";
 import { resolveScheduleTimezone } from "@/shared/lib/schedule";
 
 export default async function NoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -28,7 +29,11 @@ export default async function NoteDetailPage({ params }: { params: Promise<{ id:
       orderBy: { position: "asc" },
       include: { values: true },
     }),
-    prisma.noteSchedule.findMany({ where: { noteId: id }, orderBy: { createdAt: "desc" } }),
+    prisma.noteSchedule.findMany({
+      where: { noteId: id },
+      orderBy: { createdAt: "desc" },
+      include: { recurrence: true },
+    }),
     prisma.user.findUnique({ where: { id: session.user.id }, select: { timezone: true } }),
   ]);
   const scheduleTimezone = resolveScheduleTimezone(undefined, user?.timezone);
