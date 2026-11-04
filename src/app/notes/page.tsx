@@ -9,16 +9,25 @@ import { matchesNoteSearch } from "@/modules/notes/lib/search";
 import { NoteStatusButton } from "@/modules/notes/components/NoteStatusButton";
 import { ExportActions } from "@/modules/export/components/ExportActions";
 import { ExportSelectionForm } from "@/modules/export/components/ExportSelectionForm";
+import { boardGroupOptions } from "@/modules/notes/lib/board-groups";
 
-type SearchParams = { view?: string; property?: string; q?: string; search?: string };
+type SearchParams = {
+  view?: string;
+  property?: string;
+  q?: string;
+  search?: string;
+  groupBy?: string;
+};
 
 export default async function NotesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const session = await auth();
   // Defense in depth — middleware already protects this route.
   if (!session?.user?.id) redirect("/login");
 
-  const { view, property: filterProperty, q: filterQuery, search } = await searchParams;
+  const { view, property: filterProperty, q: filterQuery, search, groupBy } = await searchParams;
   const isTableView = view === "table";
+  const isBoardView = view === "board";
+  const isGalleryView = view === "gallery";
   const searchQuery = search?.trim() ?? "";
 
   const notes = await prisma.note.findMany({
@@ -41,6 +50,25 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
     }
   }
 
+  const boardPropertyOptions = new Map<string, Map<string, string>>();
+  for (const note of notes) {
+    for (const property of note.properties) {
+      if (property.type !== "SELECT") continue;
+      const options = boardGroupOptions(property.inputConfigJson);
+      if (options.length === 0) continue;
+      const values = boardPropertyOptions.get(property.name) ?? new Map<string, string>();
+      for (const option of options) values.set(option.value, option.label);
+      boardPropertyOptions.set(property.name, values);
+    }
+  }
+  const boardPropertyNames = [...boardPropertyOptions.keys()];
+  const selectedGroupBy = boardPropertyNames.includes(groupBy ?? "")
+    ? groupBy!
+    : (boardPropertyNames[0] ?? "");
+  const boardOptions = [...(boardPropertyOptions.get(selectedGroupBy)?.entries() ?? [])].map(
+    ([value, label]) => ({ value, label }),
+  );
+
   const query = (filterQuery ?? "").trim().toLowerCase();
   const propertyFilteredNotes = filterProperty
     ? notes.filter((note) => {
@@ -53,29 +81,54 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
   const filteredNotes = propertyFilteredNotes.filter((note) =>
     matchesNoteSearch(note, searchQuery),
   );
+  const groupedNoteIds = new Set<string>();
+  const boardGroups = boardOptions.map((option) => {
+    const groupNotes = filteredNotes.filter((note) => {
+      const value = note.properties.find(
+        (property) => property.type === "SELECT" && property.name === selectedGroupBy,
+      )?.values[0]?.valueText;
+      if (value !== option.value) return false;
+      groupedNoteIds.add(note.id);
+      return true;
+    });
+    return { ...option, notes: groupNotes };
+  });
+  const boardUnassigned = filteredNotes.filter((note) => !groupedNoteIds.has(note.id));
+
+  function notesViewHref(nextView: "list" | "table" | "board" | "gallery") {
+    const params = new URLSearchParams();
+    if (nextView !== "list") params.set("view", nextView);
+    if (filterProperty) params.set("property", filterProperty);
+    if (filterQuery) params.set("q", filterQuery);
+    if (searchQuery) params.set("search", searchQuery);
+    if (nextView === "board" && selectedGroupBy) params.set("groupBy", selectedGroupBy);
+    return params.size ? `/notes?${params}` : "/notes";
+  }
+
   const clearSearchParams = new URLSearchParams();
-  if (isTableView) clearSearchParams.set("view", "table");
+  if (view && view !== "list") clearSearchParams.set("view", view);
   if (filterProperty) clearSearchParams.set("property", filterProperty);
   if (filterQuery) clearSearchParams.set("q", filterQuery);
+  if (isBoardView && selectedGroupBy) clearSearchParams.set("groupBy", selectedGroupBy);
   const clearSearchHref = clearSearchParams.size ? `/notes?${clearSearchParams}` : "/notes";
 
   return (
     <AppShell active="notes">
-      <div className="mb-5 flex items-center justify-between gap-3">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-[19px] font-semibold">All Notes</h1>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/notes"
-            className={`rounded-card border border-border px-3 py-1.5 text-xs font-medium ${!isTableView ? "bg-raised" : "bg-surface"}`}
-          >
-            List
-          </Link>
-          <Link
-            href="/notes?view=table"
-            className={`rounded-card border border-border px-3 py-1.5 text-xs font-medium ${isTableView ? "bg-raised" : "bg-surface"}`}
-          >
-            Table
-          </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          {(["list", "table", "board", "gallery"] as const).map((nextView) => (
+            <Link
+              key={nextView}
+              href={notesViewHref(nextView)}
+              aria-current={
+                (nextView === "list" && !view) || nextView === view ? "page" : undefined
+              }
+              className={`rounded-card border border-border px-3 py-1.5 text-xs font-medium ${(nextView === "list" && !view) || nextView === view ? "bg-raised" : "bg-surface"}`}
+            >
+              {nextView[0]!.toUpperCase() + nextView.slice(1)}
+            </Link>
+          ))}
           <ExportActions
             search={searchQuery}
             property={filterProperty ?? ""}
@@ -86,7 +139,10 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
       </div>
 
       <form className="mb-4 flex flex-wrap items-center gap-2" method="get">
-        {isTableView && <input type="hidden" name="view" value="table" />}
+        {view && <input type="hidden" name="view" value={view} />}
+        {isBoardView && selectedGroupBy && (
+          <input type="hidden" name="groupBy" value={selectedGroupBy} />
+        )}
         {filterProperty && <input type="hidden" name="property" value={filterProperty} />}
         {filterQuery && <input type="hidden" name="q" value={filterQuery} />}
         <label className="sr-only" htmlFor="note-search">
@@ -115,7 +171,10 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
 
       {columnOrder.length > 0 && (
         <form className="mb-4 flex flex-wrap items-center gap-2" method="get">
-          {isTableView && <input type="hidden" name="view" value="table" />}
+          {view && <input type="hidden" name="view" value={view} />}
+          {isBoardView && selectedGroupBy && (
+            <input type="hidden" name="groupBy" value={selectedGroupBy} />
+          )}
           {searchQuery && <input type="hidden" name="search" value={searchQuery} />}
           <select
             name="property"
@@ -143,10 +202,7 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
             Apply
           </button>
           {filterProperty && (
-            <Link
-              href={searchQuery ? clearSearchHref : isTableView ? "/notes?view=table" : "/notes"}
-              className="text-xs text-muted underline"
-            >
+            <Link href={clearSearchHref} className="text-xs text-muted underline">
               Clear
             </Link>
           )}
@@ -167,6 +223,158 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
             </>
           )}
         </p>
+      ) : isBoardView ? (
+        <>
+          {boardPropertyNames.length === 0 ? (
+            <p className="text-[13px] text-muted">Add a Select property before using Board view.</p>
+          ) : (
+            <>
+              <form className="mb-4 flex flex-wrap items-end gap-2" method="get">
+                <input type="hidden" name="view" value="board" />
+                {searchQuery && <input type="hidden" name="search" value={searchQuery} />}
+                {filterProperty && <input type="hidden" name="property" value={filterProperty} />}
+                {filterQuery && <input type="hidden" name="q" value={filterQuery} />}
+                <label className="flex flex-col gap-1 text-[12px] font-medium text-muted">
+                  Group by
+                  <select
+                    name="groupBy"
+                    defaultValue={selectedGroupBy}
+                    className="h-9 rounded-control border border-control bg-surface px-3 text-[13px] text-text"
+                  >
+                    {boardPropertyNames.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="submit"
+                  className="min-h-11 rounded-control border border-control px-3 text-[12px] font-medium text-text hover:bg-raised min-[900px]:min-h-8"
+                >
+                  Apply
+                </button>
+              </form>
+              <ExportSelectionForm
+                search={searchQuery}
+                property={filterProperty ?? ""}
+                query={filterQuery ?? ""}
+              >
+                <div className="flex gap-4 overflow-x-auto pb-2">
+                  {boardGroups.map((group) => (
+                    <section
+                      key={group.value}
+                      className="w-[240px] flex-none border-r border-rule pr-4"
+                    >
+                      <h2 className="mb-2 flex items-center justify-between text-[13px] font-medium">
+                        {group.label}
+                        <span className="text-[12px] text-muted">{group.notes.length}</span>
+                      </h2>
+                      <ul className="flex flex-col gap-2">
+                        {group.notes.map((note) => (
+                          <li
+                            key={note.id}
+                            className="rounded-card border border-border bg-surface p-3"
+                          >
+                            <div className="flex items-start gap-2">
+                              <input
+                                type="checkbox"
+                                name="noteIds"
+                                value={note.id}
+                                aria-label={`Select ${note.title} for export`}
+                              />
+                              <Link
+                                href={`/notes/${note.id}`}
+                                className="min-w-0 flex-1 text-[13px] font-medium hover:underline"
+                              >
+                                {note.title}
+                              </Link>
+                            </div>
+                            {note.contentText && (
+                              <p className="mt-2 line-clamp-3 text-[12px] text-muted">
+                                {note.contentText}
+                              </p>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  ))}
+                  {boardUnassigned.length > 0 && (
+                    <section className="w-[240px] flex-none border-r border-rule pr-4">
+                      <h2 className="mb-2 flex items-center justify-between text-[13px] font-medium">
+                        No value
+                        <span className="text-[12px] text-muted">{boardUnassigned.length}</span>
+                      </h2>
+                      <ul className="flex flex-col gap-2">
+                        {boardUnassigned.map((note) => (
+                          <li
+                            key={note.id}
+                            className="rounded-card border border-border bg-surface p-3"
+                          >
+                            <div className="flex items-start gap-2">
+                              <input
+                                type="checkbox"
+                                name="noteIds"
+                                value={note.id}
+                                aria-label={`Select ${note.title} for export`}
+                              />
+                              <Link
+                                href={`/notes/${note.id}`}
+                                className="min-w-0 flex-1 text-[13px] font-medium hover:underline"
+                              >
+                                {note.title}
+                              </Link>
+                            </div>
+                            {note.contentText && (
+                              <p className="mt-2 line-clamp-3 text-[12px] text-muted">
+                                {note.contentText}
+                              </p>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+                </div>
+              </ExportSelectionForm>
+            </>
+          )}
+        </>
+      ) : isGalleryView ? (
+        <ExportSelectionForm
+          search={searchQuery}
+          property={filterProperty ?? ""}
+          query={filterQuery ?? ""}
+        >
+          <ul className="grid grid-cols-1 gap-3 min-[640px]:grid-cols-2 min-[1100px]:grid-cols-3">
+            {filteredNotes.map((note) => (
+              <li key={note.id} className="rounded-card border border-border bg-surface p-4">
+                <div className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    name="noteIds"
+                    value={note.id}
+                    aria-label={`Select ${note.title} for export`}
+                  />
+                  <Link
+                    href={`/notes/${note.id}`}
+                    className="min-w-0 flex-1 text-[14px] font-medium hover:underline"
+                  >
+                    {note.title}
+                  </Link>
+                </div>
+                {note.contentText && (
+                  <p className="mt-3 line-clamp-5 text-[13px] text-muted">{note.contentText}</p>
+                )}
+                <p className="mt-3 text-[12px] text-muted">
+                  Updated{" "}
+                  {note.updatedAt.toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </ExportSelectionForm>
       ) : isTableView ? (
         <ExportSelectionForm
           search={searchQuery}

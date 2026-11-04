@@ -94,7 +94,7 @@ Ordered, structured task list from foundation through MVP. Check items off as th
 ## Phase 6 — Advanced capabilities
 
 - [x] Recurring schedule exceptions UI — Calendar supports Skip, Edit occurrence/override and Reset; edits are deliberately limited to one occurrence per ADR-0011
-- [ ] Board/Gallery views
+- [x] Board/Gallery views — Board groups by a Select property (unassigned Notes stay visible); Gallery shows content excerpts, both support Note selection/export
 - [x] PDF/Markdown export — Markdown preserves supported TipTap formatting; PDF is paginated and readable, with unsupported glyphs replaced when using the built-in WinAnsi font
 - [ ] Analytics
 - [ ] Formula/Rollup properties
