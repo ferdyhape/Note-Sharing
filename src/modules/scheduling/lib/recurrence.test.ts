@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { RRule, rrulestr } from "rrule";
 import type { NoteSchedule } from "@prisma/client";
-import { recurrenceInputSchema, skipOccurrenceSchema } from "../schema";
+import { overrideOccurrenceSchema, recurrenceInputSchema, skipOccurrenceSchema } from "../schema";
 import { buildRRule, recurrenceStartsAt } from "./recurrence";
 
 const timedSchedule: NoteSchedule = {
@@ -38,6 +38,25 @@ describe("recurrenceInputSchema", () => {
     );
     expect(
       skipOccurrenceSchema.safeParse({ occurrenceKey: "2026-03-02T09:00:00-05:00" }).success,
+    ).toBe(false);
+  });
+
+  it("validates one-occurrence overrides without permitting a reversed range", () => {
+    expect(
+      overrideOccurrenceSchema.safeParse({
+        occurrenceKey: "2026-03-02T09:00:00Z",
+        scheduleType: "TIMED",
+        startAtUtc: "2026-03-02T10:00:00Z",
+        endAtUtc: "2026-03-02T11:00:00Z",
+      }).success,
+    ).toBe(true);
+    expect(
+      overrideOccurrenceSchema.safeParse({
+        occurrenceKey: "2026-03-02T09:00:00Z",
+        scheduleType: "RANGE",
+        startDate: "2026-03-04",
+        endDate: "2026-03-03",
+      }).success,
     ).toBe(false);
   });
 });

@@ -1,6 +1,7 @@
 import { Temporal } from "@js-temporal/polyfill";
 import type { NoteSchedule, RecurrenceRule, ScheduleException } from "@prisma/client";
 import { rrulestr } from "rrule";
+import { overrideOccurrenceSchema } from "../schema";
 
 const MAX_RECURRENCE_COUNT = 1000;
 
@@ -20,6 +21,7 @@ export type ScheduleOccurrence = {
   endAtUtc: string | null;
   startDate: string | null;
   endDate: string | null;
+  isOverridden?: boolean;
 };
 
 function wallStart(schedule: NoteSchedule) {
@@ -191,6 +193,56 @@ function occurrenceFromWallStart(
   } satisfies ScheduleOccurrence;
 }
 
+function wallTimeFromOccurrenceKey(schedule: NoteSchedule, occurrenceKey: string) {
+  if (schedule.scheduleType === "TIMED") {
+    return Temporal.Instant.from(occurrenceKey)
+      .toZonedDateTimeISO(schedule.timezone)
+      .toPlainDateTime();
+  }
+  return Temporal.PlainDate.from(occurrenceKey.slice(0, 10)).toPlainDateTime();
+}
+
+function applyOverride(
+  schedule: NoteSchedule,
+  occurrence: ScheduleOccurrence,
+  exception: ScheduleException,
+): ScheduleOccurrence {
+  const rawOverride = exception.overrideJson;
+  if (!rawOverride || typeof rawOverride !== "object" || Array.isArray(rawOverride)) {
+    throw new Error("Stored occurrence override is invalid.");
+  }
+  const parsed = overrideOccurrenceSchema.safeParse({
+    occurrenceKey: exception.occurrenceKey,
+    ...rawOverride,
+  });
+  if (!parsed.success || parsed.data.scheduleType !== schedule.scheduleType) {
+    throw new Error("Stored occurrence override does not match its schedule type.");
+  }
+
+  if (parsed.data.scheduleType === "TIMED") {
+    return {
+      ...occurrence,
+      startAtUtc: parsed.data.startAtUtc,
+      endAtUtc: parsed.data.endAtUtc ?? null,
+      isOverridden: true,
+    };
+  }
+  if (parsed.data.scheduleType === "ALL_DAY") {
+    return {
+      ...occurrence,
+      startDate: parsed.data.startDate,
+      endDate: parsed.data.endDate ?? null,
+      isOverridden: true,
+    };
+  }
+  return {
+    ...occurrence,
+    startDate: parsed.data.startDate,
+    endDate: parsed.data.endDate,
+    isOverridden: true,
+  };
+}
+
 function overlapsWindow(occurrence: ScheduleOccurrence, window: OccurrenceWindow) {
   if (occurrence.scheduleType !== "TIMED") {
     return (
@@ -242,19 +294,39 @@ export function expandScheduleOccurrences(
       ? Temporal.Duration.from({ milliseconds: duration.milliseconds })
       : Temporal.Duration.from({ days: duration.days });
   const candidateFrom = from.subtract(lookBehind);
-  const wallStarts = recurrence
+  const generatedWallStarts = recurrence
     ? candidateWallStarts(schedule, recurrence, candidateFrom, to)
     : [wallStart(schedule)];
-  const skipped = new Set(
-    exceptions
-      .filter((exception) => exception.exceptionType === "SKIP")
-      .map((exception) => exception.occurrenceKey),
+  const exceptionByKey = new Map(
+    exceptions.map((exception) => [exception.occurrenceKey, exception]),
   );
+  const overrideExceptions = exceptions.filter(
+    (exception) => exception.exceptionType === "OVERRIDE",
+  );
+  const overrideKeys = new Set(overrideExceptions.map((exception) => exception.occurrenceKey));
+  const wallStartsByKey = new Map(
+    generatedWallStarts.map((wallTime) => [wallTime.toString(), wallTime]),
+  );
+  for (const exception of overrideExceptions) {
+    const wallTime = wallTimeFromOccurrenceKey(schedule, exception.occurrenceKey);
+    wallStartsByKey.set(wallTime.toString(), wallTime);
+  }
 
-  return wallStarts
-    .filter((wallTime) => Temporal.PlainDateTime.compare(wallTime, candidateFrom) >= 0)
+  return [...wallStartsByKey.values()]
+    .filter(
+      (wallTime) =>
+        Temporal.PlainDateTime.compare(wallTime, candidateFrom) >= 0 ||
+        overrideKeys.has(occurrenceFromWallStart(schedule, wallTime)?.occurrenceKey ?? ""),
+    )
+    .sort(Temporal.PlainDateTime.compare)
     .map((wallTime) => occurrenceFromWallStart(schedule, wallTime))
     .filter((occurrence): occurrence is ScheduleOccurrence => Boolean(occurrence))
-    .filter((occurrence) => !skipped.has(occurrence.occurrenceKey))
+    .filter((occurrence) => exceptionByKey.get(occurrence.occurrenceKey)?.exceptionType !== "SKIP")
+    .map((occurrence) => {
+      const exception = exceptionByKey.get(occurrence.occurrenceKey);
+      return exception?.exceptionType === "OVERRIDE"
+        ? applyOverride(schedule, occurrence, exception)
+        : occurrence;
+    })
     .filter((occurrence) => overlapsWindow(occurrence, window));
 }

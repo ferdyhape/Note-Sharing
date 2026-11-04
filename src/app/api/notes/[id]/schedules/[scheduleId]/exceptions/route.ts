@@ -1,1 +1,1 @@
-export { POST, DELETE } from "@/modules/scheduling/api/schedule-exceptions";
+export { POST, PUT, DELETE } from "@/modules/scheduling/api/schedule-exceptions";

@@ -32,7 +32,11 @@ export async function getAgenda(userId: string, query: AgendaQuery & { timezone:
         recurrence: {
           is: {
             startsAt: { lt: window.endsAtUtc },
-            OR: [{ untilDate: null }, { untilDate: { gte: dateFrom } }],
+            OR: [
+              { untilDate: null },
+              { untilDate: { gte: dateFrom } },
+              { exceptions: { some: { exceptionType: "OVERRIDE" } } },
+            ],
           },
         },
       },

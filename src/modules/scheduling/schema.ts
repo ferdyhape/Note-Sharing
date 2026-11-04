@@ -1,6 +1,9 @@
 import { z } from "zod";
 
 const weekdaySchema = z.enum(["MO", "TU", "WE", "TH", "FR", "SA", "SU"]);
+const occurrenceKeySchema = z.iso
+  .datetime({ offset: true })
+  .refine((value) => value.endsWith("Z"), "Occurrence keys must be UTC instants.");
 
 export const recurrenceInputSchema = z
   .object({
@@ -72,5 +75,60 @@ export const skipOccurrenceSchema = z
   })
   .strict();
 
+export const overrideOccurrenceSchema = z.discriminatedUnion("scheduleType", [
+  z
+    .object({
+      occurrenceKey: occurrenceKeySchema,
+      scheduleType: z.literal("TIMED"),
+      startAtUtc: z.iso.datetime({ offset: true }),
+      endAtUtc: z.iso.datetime({ offset: true }).nullable().optional(),
+    })
+    .strict()
+    .superRefine((override, context) => {
+      if (override.endAtUtc && new Date(override.startAtUtc) >= new Date(override.endAtUtc)) {
+        context.addIssue({
+          code: "custom",
+          path: ["endAtUtc"],
+          message: "End time must follow start time.",
+        });
+      }
+    }),
+  z
+    .object({
+      occurrenceKey: occurrenceKeySchema,
+      scheduleType: z.literal("ALL_DAY"),
+      startDate: z.iso.date(),
+      endDate: z.iso.date().nullable().optional(),
+    })
+    .strict()
+    .superRefine((override, context) => {
+      if (override.endDate && override.startDate > override.endDate) {
+        context.addIssue({
+          code: "custom",
+          path: ["endDate"],
+          message: "End date must not precede start date.",
+        });
+      }
+    }),
+  z
+    .object({
+      occurrenceKey: occurrenceKeySchema,
+      scheduleType: z.literal("RANGE"),
+      startDate: z.iso.date(),
+      endDate: z.iso.date(),
+    })
+    .strict()
+    .superRefine((override, context) => {
+      if (override.startDate > override.endDate) {
+        context.addIssue({
+          code: "custom",
+          path: ["endDate"],
+          message: "End date must not precede start date.",
+        });
+      }
+    }),
+]);
+
 export type RecurrenceInput = z.infer<typeof recurrenceInputSchema>;
 export type SkipOccurrenceInput = z.infer<typeof skipOccurrenceSchema>;
+export type OverrideOccurrenceInput = z.infer<typeof overrideOccurrenceSchema>;

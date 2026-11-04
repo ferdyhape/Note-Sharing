@@ -12,6 +12,7 @@ import {
   weekGridDates,
 } from "@/modules/calendar/lib/month-grid";
 import { groupCalendarEventsByDate } from "@/modules/calendar/lib/event-days";
+import { OccurrenceOverrideForm } from "@/modules/calendar/components/OccurrenceOverrideForm";
 
 type AgendaEvent = ScheduleOccurrence & {
   noteTitle: string;
@@ -73,10 +74,12 @@ function SelectedDayEvents({
   date,
   events,
   onSkip,
+  onChanged,
 }: {
   date: string;
   events: AgendaEvent[];
   onSkip: (event: AgendaEvent) => void;
+  onChanged: () => void;
 }) {
   return (
     <section className="mt-5" aria-labelledby="selected-date-heading">
@@ -92,6 +95,7 @@ function SelectedDayEvents({
               key={`${event.scheduleId}:${event.occurrenceKey}`}
               event={event}
               onSkip={onSkip}
+              onChanged={onChanged}
             />
           ))}
         </ul>
@@ -103,30 +107,90 @@ function SelectedDayEvents({
 function CalendarEventRow({
   event,
   onSkip,
+  onChanged,
 }: {
   event: AgendaEvent;
   onSkip: (event: AgendaEvent) => void;
+  onChanged: () => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function resetOverride() {
+    if (!window.confirm("Restore the original occurrence from its recurrence rule?")) return;
+    setError(null);
+    const response = await fetch(
+      `/api/notes/${event.noteId}/schedules/${event.scheduleId}/exceptions`,
+      {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ occurrenceKey: event.occurrenceKey }),
+      },
+    );
+    const body = await response.json();
+    if (!response.ok) {
+      setError(body.error?.message ?? "Could not restore this occurrence.");
+      return;
+    }
+    onChanged();
+  }
+
   return (
-    <li className="flex flex-col gap-1 py-3 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between">
-      <Link
-        href={`/notes/${event.noteId}`}
-        className="min-w-0 text-[14px] font-medium text-text hover:underline"
-      >
-        {event.noteTitle || "Untitled note"}
-      </Link>
-      <div className="flex items-center justify-between gap-3 min-[640px]:justify-end">
-        <span className="text-[12px] text-muted">{eventTime(event)}</span>
-        {event.isRecurring && event.canEdit && (
-          <button
-            type="button"
-            onClick={() => onSkip(event)}
-            className="min-h-11 px-2 text-[12px] font-medium text-text underline underline-offset-2 min-[900px]:min-h-8"
-          >
-            Skip
-          </button>
-        )}
+    <li className="flex flex-col gap-1 py-3">
+      <div className="flex flex-col gap-1 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between">
+        <Link
+          href={`/notes/${event.noteId}`}
+          className="min-w-0 text-[14px] font-medium text-text hover:underline"
+        >
+          {event.noteTitle || "Untitled note"}
+        </Link>
+        <div className="flex items-center justify-between gap-3 min-[640px]:justify-end">
+          <span className="text-[12px] text-muted">{eventTime(event)}</span>
+          {event.isRecurring && event.canEdit && (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setEditing((current) => !current)}
+                className="min-h-11 px-2 text-[12px] font-medium text-text underline underline-offset-2 min-[900px]:min-h-8"
+              >
+                {editing ? "Cancel edit" : event.isOverridden ? "Edit override" : "Edit occurrence"}
+              </button>
+              {event.isOverridden ? (
+                <button
+                  type="button"
+                  onClick={() => void resetOverride()}
+                  className="min-h-11 px-2 text-[12px] font-medium text-text underline underline-offset-2 min-[900px]:min-h-8"
+                >
+                  Reset
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onSkip(event)}
+                  className="min-h-11 px-2 text-[12px] font-medium text-text underline underline-offset-2 min-[900px]:min-h-8"
+                >
+                  Skip
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
+      {error && (
+        <p role="alert" className="text-[13px] text-negative">
+          {error}
+        </p>
+      )}
+      {editing && event.isRecurring && event.canEdit && (
+        <OccurrenceOverrideForm
+          event={event}
+          onCancel={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false);
+            onChanged();
+          }}
+        />
+      )}
     </li>
   );
 }
@@ -230,6 +294,10 @@ export function CalendarAgenda({
           item.scheduleId !== event.scheduleId || item.occurrenceKey !== event.occurrenceKey,
       ),
     );
+  }
+
+  async function resetOrRefreshRange() {
+    await loadRange(rangeFromDate, toDate);
   }
 
   function changeView(nextView: CalendarView) {
@@ -456,6 +524,7 @@ export function CalendarAgenda({
             date={selectedDate}
             events={selectedDayEvents}
             onSkip={skipOccurrence}
+            onChanged={() => void resetOrRefreshRange()}
           />
         </div>
       )}
@@ -465,6 +534,7 @@ export function CalendarAgenda({
             date={selectedDate}
             events={selectedDayEvents}
             onSkip={skipOccurrence}
+            onChanged={() => void resetOrRefreshRange()}
           />
         </div>
       )}
@@ -507,6 +577,7 @@ export function CalendarAgenda({
             date={selectedDate}
             events={selectedDayEvents}
             onSkip={skipOccurrence}
+            onChanged={() => void resetOrRefreshRange()}
           />
         </div>
       )}
@@ -529,6 +600,7 @@ export function CalendarAgenda({
                       key={`${event.scheduleId}:${event.occurrenceKey}`}
                       event={event}
                       onSkip={skipOccurrence}
+                      onChanged={() => void resetOrRefreshRange()}
                     />
                   ))}
                 </ul>

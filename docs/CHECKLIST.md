@@ -72,7 +72,7 @@ Ordered, structured task list from foundation through MVP. Check items off as th
 ## Phase 3 — Scheduling & Calendar
 
 - [x] Schedule CRUD (date/all-day, timed, range), multiple schedules per Note — Note detail panel supports add/edit/enable/disable/delete; browser-verified across all three schedule types, including timezone display and persistence after reload
-- [ ] Recurrence rules (RRULE) + exceptions — RRULE authoring/API, bounded occurrence expansion and SKIP exceptions are implemented; OVERRIDE exceptions and recurring-scope edits remain open
+- [ ] Recurrence rules (RRULE) + exceptions — RRULE authoring/API, bounded expansion, SKIP and one-occurrence OVERRIDE are implemented; “this and following” and whole-series edits remain open
 - [x] Calendar views: month/week/day/agenda — 14-day Agenda, Month, Week and Day views implemented; browser-verified, including responsive navigation
 - [x] Timezone handling, default Asia/Jakarta — account override is editable in Settings; clearing it restores the Asia/Jakarta default for new schedules
 

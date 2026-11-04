@@ -115,4 +115,54 @@ describe("expandScheduleOccurrences", () => {
 
     expect(occurrences.map((item) => item.occurrenceKey)).toEqual(["2026-03-02T07:00:00Z"]);
   });
+
+  it("includes a moved-in override while preserving its original occurrence key", () => {
+    const schedule = timedSchedule("2026-03-02T14:00:00.000Z");
+    const recurrence = recurrenceFor(schedule, { frequency: "DAILY", count: 5 });
+    const override: ScheduleException = {
+      id: "override-1",
+      scheduleId: recurrence.id,
+      occurrenceKey: "2026-03-03T14:00:00Z",
+      exceptionType: "OVERRIDE",
+      overrideJson: {
+        scheduleType: "TIMED",
+        startAtUtc: "2026-03-06T15:00:00Z",
+        endAtUtc: null,
+      },
+    };
+    const occurrences = expandScheduleOccurrences(schedule, recurrence, [override], {
+      fromDate: "2026-03-06",
+      toDate: "2026-03-06",
+      timezone: "America/New_York",
+    });
+    const moved = occurrences.find((item) => item.occurrenceKey === override.occurrenceKey);
+
+    expect(moved?.startAtUtc).toBe("2026-03-06T15:00:00Z");
+    expect(moved?.occurrenceKey).toBe("2026-03-03T14:00:00Z");
+    expect(moved?.isOverridden).toBe(true);
+  });
+
+  it("does not show the original slot when its override moved outside the window", () => {
+    const schedule = timedSchedule("2026-03-02T14:00:00.000Z");
+    const recurrence = recurrenceFor(schedule, { frequency: "DAILY", count: 5 });
+    const override: ScheduleException = {
+      id: "override-1",
+      scheduleId: recurrence.id,
+      occurrenceKey: "2026-03-03T14:00:00Z",
+      exceptionType: "OVERRIDE",
+      overrideJson: {
+        scheduleType: "TIMED",
+        startAtUtc: "2026-03-06T15:00:00Z",
+        endAtUtc: null,
+      },
+    };
+
+    const occurrences = expandScheduleOccurrences(schedule, recurrence, [override], {
+      fromDate: "2026-03-03",
+      toDate: "2026-03-03",
+      timezone: "America/New_York",
+    });
+
+    expect(occurrences).toEqual([]);
+  });
 });
