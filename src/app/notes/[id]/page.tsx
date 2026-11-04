@@ -14,6 +14,7 @@ import { ReminderPanel } from "@/modules/reminders/components/ReminderPanel";
 import type { ReminderDTO, ReminderRecipientOption } from "@/modules/reminders/types";
 import { SharePanel } from "@/modules/sharing/components/SharePanel";
 import type { ShareDTO } from "@/modules/sharing/types";
+import { ExportActions } from "@/modules/export/components/ExportActions";
 
 export default async function NoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -74,6 +75,9 @@ export default async function NoteDetailPage({ params }: { params: Promise<{ id:
         initialContentJson={note.contentJson as JSONContent}
         accessLevel={access}
       />
+      <div className="mt-3 flex justify-end">
+        <ExportActions search="" property="" query="" scope="note" noteId={note.id} />
+      </div>
       {access === "OWNER" && (
         <SharePanel
           key={recipientShares.map((share) => `${share.id}:${share.role}`).join("|")}

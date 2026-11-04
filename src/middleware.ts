@@ -31,5 +31,5 @@ export const config = {
   // routes themselves (which must stay reachable to sign in at all) — the
   // root "/" is left out too (the `|$` alternative matches an empty
   // remainder, i.e. root), since it isn't a protected page yet.
-  matcher: ["/((?!api/auth|api/cron|_next/static|_next/image|favicon.ico|$).*)"],
+  matcher: ["/((?!api/auth|api/cron/reminders|_next/static|_next/image|favicon.ico|$).*)"],
 };

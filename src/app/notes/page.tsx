@@ -7,6 +7,8 @@ import { CreateNoteButton } from "@/shared/components/CreateNoteButton";
 import { formatPropertyValue } from "@/shared/lib/property-value";
 import { matchesNoteSearch } from "@/modules/notes/lib/search";
 import { NoteStatusButton } from "@/modules/notes/components/NoteStatusButton";
+import { ExportActions } from "@/modules/export/components/ExportActions";
+import { ExportSelectionForm } from "@/modules/export/components/ExportSelectionForm";
 
 type SearchParams = { view?: string; property?: string; q?: string; search?: string };
 
@@ -74,6 +76,11 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
           >
             Table
           </Link>
+          <ExportActions
+            search={searchQuery}
+            property={filterProperty ?? ""}
+            query={filterQuery ?? ""}
+          />
           <CreateNoteButton />
         </div>
       </div>
@@ -161,66 +168,100 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
           )}
         </p>
       ) : isTableView ? (
-        <div className="overflow-x-auto rounded-card border border-border">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface">
-                <th className="whitespace-nowrap px-3 py-2 text-left font-medium">Title</th>
-                {columnOrder.map((name) => (
-                  <th key={name} className="whitespace-nowrap px-3 py-2 text-left font-medium">
-                    {name}
+        <ExportSelectionForm
+          search={searchQuery}
+          property={filterProperty ?? ""}
+          query={filterQuery ?? ""}
+        >
+          <div className="overflow-x-auto rounded-card border border-border">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-border bg-surface">
+                  <th className="px-2 py-2 text-left font-medium">
+                    <span className="sr-only">Select</span>
                   </th>
-                ))}
-                <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredNotes.map((note) => (
-                <tr key={note.id} className="border-b border-border last:border-0 hover:bg-raised">
-                  <td className="whitespace-nowrap px-3 py-2">
-                    <Link href={`/notes/${note.id}`} className="font-medium hover:underline">
-                      {note.title}
-                    </Link>
-                  </td>
-                  {columnOrder.map((name) => {
-                    const prop = note.properties.find((p) => p.name === name);
-                    return (
-                      <td key={name} className="whitespace-nowrap px-3 py-2 text-muted">
-                        {prop ? formatPropertyValue(prop.type, prop.values[0]) : ""}
-                      </td>
-                    );
-                  })}
-                  <td className="whitespace-nowrap px-3 py-1 text-right">
-                    <NoteStatusButton noteId={note.id} status="ACTIVE" />
-                  </td>
+                  <th className="whitespace-nowrap px-3 py-2 text-left font-medium">Title</th>
+                  {columnOrder.map((name) => (
+                    <th key={name} className="whitespace-nowrap px-3 py-2 text-left font-medium">
+                      {name}
+                    </th>
+                  ))}
+                  <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filteredNotes.map((note) => (
+                  <tr
+                    key={note.id}
+                    className="border-b border-border last:border-0 hover:bg-raised"
+                  >
+                    <td className="px-2 py-2">
+                      <input
+                        type="checkbox"
+                        name="noteIds"
+                        value={note.id}
+                        aria-label={`Select ${note.title} for export`}
+                      />
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2">
+                      <Link href={`/notes/${note.id}`} className="font-medium hover:underline">
+                        {note.title}
+                      </Link>
+                    </td>
+                    {columnOrder.map((name) => {
+                      const prop = note.properties.find((p) => p.name === name);
+                      return (
+                        <td key={name} className="whitespace-nowrap px-3 py-2 text-muted">
+                          {prop ? formatPropertyValue(prop.type, prop.values[0]) : ""}
+                        </td>
+                      );
+                    })}
+                    <td className="whitespace-nowrap px-3 py-1 text-right">
+                      <NoteStatusButton noteId={note.id} status="ACTIVE" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </ExportSelectionForm>
       ) : (
-        <ul className="flex flex-col gap-2">
-          {filteredNotes.map((note) => (
-            <li
-              key={note.id}
-              className="flex items-center justify-between gap-3 rounded-card border border-border bg-surface px-4 py-2"
-            >
-              <Link
-                href={`/notes/${note.id}`}
-                className="flex min-h-11 min-w-0 flex-1 items-center justify-between gap-3 py-2 hover:underline"
+        <ExportSelectionForm
+          search={searchQuery}
+          property={filterProperty ?? ""}
+          query={filterQuery ?? ""}
+        >
+          <ul className="flex flex-col gap-2">
+            {filteredNotes.map((note) => (
+              <li
+                key={note.id}
+                className="flex items-center justify-between gap-3 rounded-card border border-border bg-surface px-4 py-2"
               >
-                <span className="truncate text-sm font-medium">{note.title}</span>
-                <span className="text-xs text-muted">
-                  {note.updatedAt.toLocaleDateString(undefined, {
-                    day: "numeric",
-                    month: "short",
-                  })}
-                </span>
-              </Link>
-              <NoteStatusButton noteId={note.id} status="ACTIVE" />
-            </li>
-          ))}
-        </ul>
+                <label className="flex min-h-11 items-center pr-2">
+                  <input
+                    type="checkbox"
+                    name="noteIds"
+                    value={note.id}
+                    aria-label={`Select ${note.title} for export`}
+                  />
+                </label>
+                <Link
+                  href={`/notes/${note.id}`}
+                  className="flex min-h-11 min-w-0 flex-1 items-center justify-between gap-3 py-2 hover:underline"
+                >
+                  <span className="truncate text-sm font-medium">{note.title}</span>
+                  <span className="text-xs text-muted">
+                    {note.updatedAt.toLocaleDateString(undefined, {
+                      day: "numeric",
+                      month: "short",
+                    })}
+                  </span>
+                </Link>
+                <NoteStatusButton noteId={note.id} status="ACTIVE" />
+              </li>
+            ))}
+          </ul>
+        </ExportSelectionForm>
       )}
     </AppShell>
   );
