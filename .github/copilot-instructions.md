@@ -34,6 +34,7 @@ Before implementation progress in a new task, read the active documents below fo
 - [ADR-0007: Technology stack](../docs/adr/0007-technology-stack.md)
 - [ADR-0008: Non-real-time shared editing](../docs/adr/0008-non-real-time-shared-editing.md)
 - [ADR-0009: Authentication strategy](../docs/adr/0009-auth-strategy.md)
+- [ADR-0010: DST policy for recurring schedules](../docs/adr/0010-dst-recurrence-policy.md)
 
 ## Before touching code
 

@@ -13,6 +13,7 @@ Each file here records one significant decision: the context that forced it, wha
 | [0007](0007-technology-stack.md)                          | Technology stack — serverless Next.js                      |
 | [0008](0008-non-real-time-shared-editing.md)              | Shared Note editing is not real-time                       |
 | [0009](0009-auth-strategy.md)                             | Auth strategy — email+password and Google OAuth            |
+| [0010](0010-dst-recurrence-policy.md)                     | DST policy for recurring schedules                         |
 
 ## Writing a new ADR
 
