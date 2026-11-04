@@ -8,7 +8,11 @@ import { getAgenda } from "@/modules/calendar/lib/get-agenda";
 import { CalendarAgenda } from "@/modules/calendar/components/CalendarAgenda";
 import type { ScheduleOccurrence } from "@/modules/scheduling/lib/occurrences";
 
-type AgendaEvent = ScheduleOccurrence & { noteTitle: string };
+type AgendaEvent = ScheduleOccurrence & {
+  noteTitle: string;
+  canEdit: boolean;
+  isRecurring: boolean;
+};
 
 export default async function CalendarPage() {
   const session = await auth();

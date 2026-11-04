@@ -64,4 +64,13 @@ export const recurrenceInputSchema = z
     }
   });
 
+export const skipOccurrenceSchema = z
+  .object({
+    occurrenceKey: z.iso
+      .datetime({ offset: true })
+      .refine((value) => value.endsWith("Z"), "Occurrence keys must be UTC instants."),
+  })
+  .strict();
+
 export type RecurrenceInput = z.infer<typeof recurrenceInputSchema>;
+export type SkipOccurrenceInput = z.infer<typeof skipOccurrenceSchema>;

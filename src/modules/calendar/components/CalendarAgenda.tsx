@@ -13,7 +13,11 @@ import {
 } from "@/modules/calendar/lib/month-grid";
 import { groupCalendarEventsByDate } from "@/modules/calendar/lib/event-days";
 
-type AgendaEvent = ScheduleOccurrence & { noteTitle: string };
+type AgendaEvent = ScheduleOccurrence & {
+  noteTitle: string;
+  canEdit: boolean;
+  isRecurring: boolean;
+};
 type CalendarView = "AGENDA" | "DAY" | "WEEK" | "MONTH";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -65,7 +69,15 @@ function shiftDate(value: string, days: number) {
   return Temporal.PlainDate.from(value).add({ days }).toString();
 }
 
-function SelectedDayEvents({ date, events }: { date: string; events: AgendaEvent[] }) {
+function SelectedDayEvents({
+  date,
+  events,
+  onSkip,
+}: {
+  date: string;
+  events: AgendaEvent[];
+  onSkip: (event: AgendaEvent) => void;
+}) {
   return (
     <section className="mt-5" aria-labelledby="selected-date-heading">
       <h2 id="selected-date-heading" className="mb-2 text-[14px] font-semibold text-text">
@@ -76,22 +88,46 @@ function SelectedDayEvents({ date, events }: { date: string; events: AgendaEvent
       ) : (
         <ul className="divide-y divide-rule border-t border-rule">
           {events.map((event) => (
-            <li
+            <CalendarEventRow
               key={`${event.scheduleId}:${event.occurrenceKey}`}
-              className="flex flex-col gap-1 py-3 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between"
-            >
-              <Link
-                href={`/notes/${event.noteId}`}
-                className="text-[14px] font-medium text-text hover:underline"
-              >
-                {event.noteTitle || "Untitled note"}
-              </Link>
-              <span className="text-[12px] text-muted">{eventTime(event)}</span>
-            </li>
+              event={event}
+              onSkip={onSkip}
+            />
           ))}
         </ul>
       )}
     </section>
+  );
+}
+
+function CalendarEventRow({
+  event,
+  onSkip,
+}: {
+  event: AgendaEvent;
+  onSkip: (event: AgendaEvent) => void;
+}) {
+  return (
+    <li className="flex flex-col gap-1 py-3 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between">
+      <Link
+        href={`/notes/${event.noteId}`}
+        className="min-w-0 text-[14px] font-medium text-text hover:underline"
+      >
+        {event.noteTitle || "Untitled note"}
+      </Link>
+      <div className="flex items-center justify-between gap-3 min-[640px]:justify-end">
+        <span className="text-[12px] text-muted">{eventTime(event)}</span>
+        {event.isRecurring && event.canEdit && (
+          <button
+            type="button"
+            onClick={() => onSkip(event)}
+            className="min-h-11 px-2 text-[12px] font-medium text-text underline underline-offset-2 min-[900px]:min-h-8"
+          >
+            Skip
+          </button>
+        )}
+      </div>
+    </li>
   );
 }
 
@@ -166,6 +202,34 @@ export function CalendarAgenda({
     } finally {
       if (requestId.current === nextRequestId) setLoading(false);
     }
+  }
+
+  async function skipOccurrence(event: AgendaEvent) {
+    if (
+      !window.confirm("Skip this occurrence only? The rest of the series will remain unchanged.")
+    ) {
+      return;
+    }
+    setError(null);
+    const response = await fetch(
+      `/api/notes/${event.noteId}/schedules/${event.scheduleId}/exceptions`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ occurrenceKey: event.occurrenceKey }),
+      },
+    );
+    const body = await response.json();
+    if (!response.ok) {
+      setError(body.error?.message ?? "Could not skip this occurrence.");
+      return;
+    }
+    setEvents((current) =>
+      current.filter(
+        (item) =>
+          item.scheduleId !== event.scheduleId || item.occurrenceKey !== event.occurrenceKey,
+      ),
+    );
   }
 
   function changeView(nextView: CalendarView) {
@@ -388,12 +452,20 @@ export function CalendarAgenda({
               );
             })}
           </div>
-          <SelectedDayEvents date={selectedDate} events={selectedDayEvents} />
+          <SelectedDayEvents
+            date={selectedDate}
+            events={selectedDayEvents}
+            onSkip={skipOccurrence}
+          />
         </div>
       )}
       {!error && view === "DAY" && (
         <div aria-busy={loading}>
-          <SelectedDayEvents date={selectedDate} events={selectedDayEvents} />
+          <SelectedDayEvents
+            date={selectedDate}
+            events={selectedDayEvents}
+            onSkip={skipOccurrence}
+          />
         </div>
       )}
       {!error && view === "MONTH" && (
@@ -431,7 +503,11 @@ export function CalendarAgenda({
               );
             })}
           </div>
-          <SelectedDayEvents date={selectedDate} events={selectedDayEvents} />
+          <SelectedDayEvents
+            date={selectedDate}
+            events={selectedDayEvents}
+            onSkip={skipOccurrence}
+          />
         </div>
       )}
       {!error && view === "AGENDA" && events.length > 0 && (
@@ -449,18 +525,11 @@ export function CalendarAgenda({
                 </h2>
                 <ul className="divide-y divide-rule">
                   {dayEvents.map((event) => (
-                    <li
+                    <CalendarEventRow
                       key={`${event.scheduleId}:${event.occurrenceKey}`}
-                      className="flex flex-col gap-1 py-3 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between"
-                    >
-                      <Link
-                        href={`/notes/${event.noteId}`}
-                        className="min-w-0 text-[14px] font-medium text-text hover:underline"
-                      >
-                        {event.noteTitle || "Untitled note"}
-                      </Link>
-                      <span className="text-[12px] text-muted">{eventTime(event)}</span>
-                    </li>
+                      event={event}
+                      onSkip={skipOccurrence}
+                    />
                   ))}
                 </ul>
               </section>

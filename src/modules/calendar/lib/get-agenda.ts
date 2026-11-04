@@ -12,7 +12,12 @@ export async function getAgenda(userId: string, query: AgendaQuery & { timezone:
       status: "ACTIVE",
       OR: [{ ownerId: userId }, { shares: { some: { userId } } }],
     },
-    select: { id: true, title: true },
+    select: {
+      id: true,
+      title: true,
+      ownerId: true,
+      shares: { where: { userId }, select: { role: true } },
+    },
   });
   if (notes.length === 0) return [];
 
@@ -57,12 +62,18 @@ export async function getAgenda(userId: string, query: AgendaQuery & { timezone:
   const events = schedules.flatMap((schedule) => {
     const note = noteById.get(schedule.noteId);
     if (!note) return [];
+    const canEdit = note.ownerId === userId || note.shares.some((share) => share.role === "EDITOR");
     return expandScheduleOccurrences(
       schedule,
       schedule.recurrence,
       schedule.recurrence?.exceptions ?? [],
       { fromDate: query.from, toDate: query.to, timezone: query.timezone },
-    ).map((occurrence) => ({ ...occurrence, noteTitle: note.title }));
+    ).map((occurrence) => ({
+      ...occurrence,
+      noteTitle: note.title,
+      canEdit,
+      isRecurring: Boolean(schedule.recurrence),
+    }));
   });
 
   events.sort((left, right) => {

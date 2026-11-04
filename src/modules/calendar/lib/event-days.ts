@@ -1,16 +1,14 @@
 import { Temporal } from "@js-temporal/polyfill";
 import type { ScheduleOccurrence } from "@/modules/scheduling/lib/occurrences";
 
-export type CalendarEvent = ScheduleOccurrence & { noteTitle: string };
-
-export function groupCalendarEventsByDate(
-  events: CalendarEvent[],
+export function groupCalendarEventsByDate<T extends ScheduleOccurrence>(
+  events: T[],
   fromDate: string,
   toDate: string,
 ) {
   const windowStart = Temporal.PlainDate.from(fromDate);
   const windowEnd = Temporal.PlainDate.from(toDate);
-  const grouped = new Map<string, CalendarEvent[]>();
+  const grouped = new Map<string, T[]>();
 
   for (const event of events) {
     let startDate: Temporal.PlainDate;

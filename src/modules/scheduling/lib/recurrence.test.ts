@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { RRule, rrulestr } from "rrule";
 import type { NoteSchedule } from "@prisma/client";
-import { recurrenceInputSchema } from "../schema";
+import { recurrenceInputSchema, skipOccurrenceSchema } from "../schema";
 import { buildRRule, recurrenceStartsAt } from "./recurrence";
 
 const timedSchedule: NoteSchedule = {
@@ -30,6 +30,15 @@ describe("recurrenceInputSchema", () => {
     expect(recurrenceInputSchema.safeParse({ frequency: "DAILY", monthDays: [1] }).success).toBe(
       false,
     );
+  });
+
+  it("requires canonical UTC occurrence keys for skip exceptions", () => {
+    expect(skipOccurrenceSchema.safeParse({ occurrenceKey: "2026-03-02T09:00:00Z" }).success).toBe(
+      true,
+    );
+    expect(
+      skipOccurrenceSchema.safeParse({ occurrenceKey: "2026-03-02T09:00:00-05:00" }).success,
+    ).toBe(false);
   });
 });
 
