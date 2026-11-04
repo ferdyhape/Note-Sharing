@@ -1,0 +1,467 @@
+// Notula — Prisma schema
+// Source: docs/md/04_Data_Model_and_ERD.md + ADR-0001 through ADR-0009 (docs/adr/).
+// Table/column names are snake_case (@@map/@map) to match the data dictionary;
+// Prisma model/field names stay PascalCase/camelCase per Prisma convention.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Connection config (DATABASE_URL/DIRECT_URL, driver adapter) lives in
+// prisma.config.ts, not here — Prisma 7 moved it out of the schema file.
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Identity & Auth (ADR-0009: email+password AND Google OAuth, via Auth.js)
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime? @map("email_verified")
+  image         String?
+  /// Null for Google-OAuth-only accounts (ADR-0009).
+  passwordHash  String?   @map("password_hash")
+  /// IANA timezone identifier. Falls back to Asia/Jakarta at the application
+  /// layer when unset — not a DB default, since the fallback is a UX choice
+  /// (ADR-0005), not a data constraint.
+  timezone      String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  accounts            Account[]
+  sessions            Session[]
+  ownedNotes          Note[]                     @relation("NoteOwner")
+  noteShares          NoteShare[]
+  reminderRecipientOf ReminderRecipient[]
+  pushSubscriptions   PushSubscription[]
+  inAppNotifications  InAppNotification[]
+  uploadedAttachments NoteAttachment[]
+  valueHistoryEntries NotePropertyValueHistory[]
+  relationTargetOf    NotePropertyValue[]        @relation("RelationTargetUser")
+
+  @@map("users")
+}
+
+/// Auth.js standard model — do not add product fields here, extend User instead.
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+/// Auth.js standard model.
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+/// Auth.js standard model (email verification / passwordless, kept for parity
+/// even though MVP auth is password + Google only).
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Notes (ADR-0001: Note-centric, no mandatory Collection)
+// ---------------------------------------------------------------------------
+
+enum NoteStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+model Note {
+  id          String     @id @default(cuid())
+  ownerId     String     @map("owner_id")
+  title       String
+  /// Rich editor document (TipTap/ProseMirror JSON).
+  contentJson Json       @map("content_json")
+  /// Flattened plain text, kept in sync with contentJson for search/export.
+  contentText String     @map("content_text")
+  status      NoteStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  deletedAt   DateTime?  @map("deleted_at")
+
+  owner       User                @relation("NoteOwner", fields: [ownerId], references: [id])
+  properties  NoteProperty[]
+  schedules   NoteSchedule[]
+  reminders   Reminder[]
+  shares      NoteShare[]
+  attachments NoteAttachment[]
+  relatedFrom NotePropertyValue[] @relation("RelationTargetNote")
+
+  @@index([ownerId])
+  @@map("notes")
+}
+
+// ---------------------------------------------------------------------------
+// Custom Properties (ADR-0001, ADR-0004: value history required)
+// ---------------------------------------------------------------------------
+
+/// The ten MVP property types from 01_PRD.md §7. DATE_TIME and URL_EMAIL each
+/// bundle a sub-mode (date-only/time-only/datetime, url/email) selected via
+/// inputConfigJson, matching the PRD's own grouping — not a schema shortcut.
+enum PropertyType {
+  TEXT
+  NUMBER
+  BOOLEAN
+  SELECT
+  MULTI_SELECT
+  DATE_TIME
+  URL_EMAIL
+  CURRENCY
+  RELATION
+  ATTACHMENT
+}
+
+model NoteProperty {
+  id                String       @id @default(cuid())
+  noteId            String       @map("note_id")
+  name              String
+  /// Stable identifier; renaming `name` must not change this (04_Data_Model_and_ERD.md §8).
+  slug              String
+  type              PropertyType
+  inputConfigJson   Json         @map("input_config_json")
+  validationJson    Json?        @map("validation_json")
+  position          Int
+  required          Boolean      @default(false)
+  definitionVersion Int          @default(1) @map("definition_version")
+  createdAt         DateTime     @default(now()) @map("created_at")
+
+  note         Note                       @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  values       NotePropertyValue[]
+  history      NotePropertyValueHistory[]
+  integrations PropertyIntegration[]
+
+  @@unique([noteId, slug])
+  @@index([noteId])
+  @@map("note_properties")
+}
+
+model NotePropertyValue {
+  id             String    @id @default(cuid())
+  propertyId     String    @unique @map("property_id")
+  valueJson      Json?     @map("value_json")
+  valueText      String?   @map("value_text")
+  valueNumber    Decimal?  @map("value_number")
+  valueDate      DateTime? @map("value_date")
+  /// Populated when the property is RELATION and targets another Note.
+  relationNoteId String?   @map("relation_note_id")
+  /// Populated when the property is RELATION and targets a User
+  /// (Relation can target a Note or a User — resolved 2026-11-04, 04_Data_Model_and_ERD.md §9).
+  relationUserId String?   @map("relation_user_id")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  property     NoteProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  relationNote Note?        @relation("RelationTargetNote", fields: [relationNoteId], references: [id])
+  relationUser User?        @relation("RelationTargetUser", fields: [relationUserId], references: [id])
+
+  @@map("note_property_values")
+}
+
+/// Insert-only. One row per superseded value (ADR-0004). Written alongside
+/// every NotePropertyValue update, at the application layer (no DB trigger).
+model NotePropertyValueHistory {
+  id          String    @id @default(cuid())
+  propertyId  String    @map("property_id")
+  valueJson   Json?     @map("value_json")
+  valueText   String?   @map("value_text")
+  valueNumber Decimal?  @map("value_number")
+  valueDate   DateTime? @map("value_date")
+  changedById String?   @map("changed_by")
+  changedAt   DateTime  @default(now()) @map("changed_at")
+
+  property  NoteProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  changedBy User?        @relation(fields: [changedById], references: [id])
+
+  @@index([propertyId])
+  @@map("note_property_value_history")
+}
+
+enum IntegrationSyncDirection {
+  PROPERTY_TO_FEATURE
+  FEATURE_TO_PROPERTY
+  BIDIRECTIONAL
+}
+
+model PropertyIntegration {
+  id              String                   @id @default(cuid())
+  propertyId      String                   @map("property_id")
+  /// e.g. "calendar_source", "reminder_reference" (02_Product_Architecture.md §5).
+  /// Left as a string rather than an enum: the set of supported integrations
+  /// is expected to grow without needing a migration each time.
+  integrationType String                   @map("integration_type")
+  enabled         Boolean                  @default(false)
+  configJson      Json?                    @map("config_json")
+  syncDirection   IntegrationSyncDirection @default(PROPERTY_TO_FEATURE) @map("sync_direction")
+  status          String?
+
+  property NoteProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@map("property_integrations")
+}
+
+// ---------------------------------------------------------------------------
+// Scheduling (ADR-0002: multiple schedules per Note; ADR-0005: timezone)
+// ---------------------------------------------------------------------------
+
+enum ScheduleType {
+  ALL_DAY
+  TIMED
+  RANGE
+}
+
+model NoteSchedule {
+  id               String       @id @default(cuid())
+  noteId           String       @map("note_id")
+  scheduleType     ScheduleType @map("schedule_type")
+  startAtUtc       DateTime?    @map("start_at_utc")
+  endAtUtc         DateTime?    @map("end_at_utc")
+  startDate        DateTime?    @map("start_date") @db.Date
+  endDate          DateTime?    @map("end_date") @db.Date
+  /// IANA timezone. Required — floating/timezone-less schedules are not
+  /// supported (ADR-0005); the app defaults to Asia/Jakarta when the user
+  /// has none set, this column itself is never null once the row exists.
+  timezone         String
+  sourcePropertyId String?      @map("source_property_id")
+  enabled          Boolean      @default(true)
+  createdAt        DateTime     @default(now()) @map("created_at")
+
+  note       Note            @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  recurrence RecurrenceRule?
+  reminders  Reminder[]
+
+  @@index([noteId])
+  @@index([startAtUtc, endAtUtc])
+  @@map("note_schedules")
+}
+
+model RecurrenceRule {
+  id         String    @id @default(cuid())
+  scheduleId String    @unique @map("schedule_id")
+  rrule      String
+  timezone   String
+  startsAt   DateTime  @map("starts_at")
+  endsAt     DateTime? @map("ends_at")
+  untilDate  DateTime? @map("until_date") @db.Date
+
+  schedule   NoteSchedule        @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  exceptions ScheduleException[]
+
+  @@map("recurrence_rules")
+}
+
+enum ScheduleExceptionType {
+  SKIP
+  OVERRIDE
+}
+
+model ScheduleException {
+  id            String                @id @default(cuid())
+  scheduleId    String                @map("schedule_id")
+  /// Identifies which generated occurrence this exception applies to
+  /// (typically the occurrence's original start instant, ISO 8601).
+  occurrenceKey String                @map("occurrence_key")
+  exceptionType ScheduleExceptionType @map("exception_type")
+  overrideJson  Json?                 @map("override_json")
+
+  recurrenceRule RecurrenceRule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, occurrenceKey])
+  @@map("schedule_exceptions")
+}
+
+// ---------------------------------------------------------------------------
+// Reminders & Notifications (ADR-0002: note_id always set, schedule_id optional)
+// ---------------------------------------------------------------------------
+
+enum ReminderTriggerMode {
+  FIXED
+  SCHEDULE_RELATIVE
+}
+
+model Reminder {
+  id             String              @id @default(cuid())
+  /// Always set — a reminder always belongs to a Note, independent of
+  /// whether it is also tied to a schedule (ADR-0002, resolved 2026-11-04).
+  noteId         String              @map("note_id")
+  /// Set only when triggerMode is SCHEDULE_RELATIVE; null for an
+  /// independent, fixed-time reminder.
+  scheduleId     String?             @map("schedule_id")
+  triggerMode    ReminderTriggerMode @map("trigger_mode")
+  offsetSeconds  Int?                @map("offset_seconds")
+  fixedTriggerAt DateTime?           @map("fixed_trigger_at")
+  enabled        Boolean             @default(true)
+  createdAt      DateTime            @default(now()) @map("created_at")
+
+  note       Note                @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  schedule   NoteSchedule?       @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  recipients ReminderRecipient[]
+
+  @@index([noteId])
+  @@index([fixedTriggerAt])
+  @@map("reminders")
+}
+
+model ReminderRecipient {
+  id                     String  @id @default(cuid())
+  reminderId             String  @map("reminder_id")
+  /// Must already hold access (Viewer/Editor) to the reminder's Note via
+  /// NoteShare — enforced at the application layer, not a DB constraint,
+  /// since it depends on the Note at the time of assignment (ADR-0003).
+  userId                 String  @map("user_id")
+  enabled                Boolean @default(true)
+  channelPreferencesJson Json?   @map("channel_preferences_json")
+
+  reminder Reminder @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reminderId, userId])
+  @@map("reminder_recipients")
+}
+
+enum NotificationType {
+  REMINDER
+  SHARE_INVITE
+  SHARE_REVOKED
+}
+
+model InAppNotification {
+  id          String           @id @default(cuid())
+  userId      String           @map("user_id")
+  type        NotificationType
+  payloadJson Json             @map("payload_json")
+  readAt      DateTime?        @map("read_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries NotificationDelivery[]
+
+  @@index([userId, readAt])
+  @@map("in_app_notifications")
+}
+
+enum NotificationChannel {
+  IN_APP
+  PUSH
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model NotificationDelivery {
+  id             String                     @id @default(cuid())
+  notificationId String                     @map("notification_id")
+  channel        NotificationChannel
+  subscriptionId String?                    @map("subscription_id")
+  status         NotificationDeliveryStatus @default(PENDING)
+  attempts       Int                        @default(0)
+  sentAt         DateTime?                  @map("sent_at")
+  errorCode      String?                    @map("error_code")
+  /// Unique per logical delivery — prevents duplicate pushes on job retry.
+  idempotencyKey String                     @unique @map("idempotency_key")
+
+  notification InAppNotification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  subscription PushSubscription? @relation(fields: [subscriptionId], references: [id])
+
+  @@map("notification_deliveries")
+}
+
+model PushSubscription {
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  userAgent  String?   @map("user_agent")
+  lastSeenAt DateTime? @map("last_seen_at")
+  revokedAt  DateTime? @map("revoked_at")
+
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries NotificationDelivery[]
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+// ---------------------------------------------------------------------------
+// Sharing (ADR-0003)
+// ---------------------------------------------------------------------------
+
+/// Owner is NOT a NoteShare row — it's the Note's own ownerId, kept as a
+/// single source of truth rather than duplicated here (avoids the owner
+/// drifting from its share row, a class of bug the NFR risk table warns
+/// about under "Permission leakage").
+enum ShareRole {
+  EDITOR
+  VIEWER
+}
+
+model NoteShare {
+  id        String    @id @default(cuid())
+  noteId    String    @map("note_id")
+  userId    String    @map("user_id")
+  role      ShareRole
+  grantedBy String    @map("granted_by")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([noteId, userId])
+  @@map("note_shares")
+}
+
+// ---------------------------------------------------------------------------
+// Attachments (Note-level — distinct from the ATTACHMENT property type)
+// ---------------------------------------------------------------------------
+
+model NoteAttachment {
+  id         String   @id @default(cuid())
+  noteId     String   @map("note_id")
+  uploadedBy String   @map("uploaded_by")
+  storageKey String   @map("storage_key")
+  filename   String
+  mimeType   String   @map("mime_type")
+  sizeBytes  Int      @map("size_bytes")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  note     Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  uploader User @relation(fields: [uploadedBy], references: [id])
+
+  @@index([noteId])
+  @@map("note_attachments")
+}

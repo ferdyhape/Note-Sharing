@@ -10,6 +10,7 @@ Date: 2026-11-04
 ## Decision
 
 Support both:
+
 - Email + password (credentials-based).
 - Google OAuth.
 

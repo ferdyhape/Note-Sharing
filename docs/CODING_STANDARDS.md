@@ -40,15 +40,15 @@ A module should be deletable by deleting its folder (plus its Prisma models and 
 
 ## 2. Naming conventions
 
-| What | Convention | Example |
-| --- | --- | --- |
-| Variables, functions | `camelCase` | `getDueReminders` |
-| React components, types, interfaces | `PascalCase` | `NotePropertyForm`, `ScheduleInput` |
-| Files containing a component | `PascalCase.tsx` | `NotePropertyForm.tsx` |
-| Other files (routes, utils, hooks) | `kebab-case.ts` | `get-due-reminders.ts` |
-| Constants (module-level, immutable) | `UPPER_SNAKE_CASE` | `MAX_PROPERTIES_PER_NOTE` |
-| Database tables/columns (Prisma) | `snake_case`, matching `04_Data_Model_and_ERD.md` exactly | `note_property_values` |
-| React hooks | `useCamelCase`, prefixed `use` | `useReminderList` |
+| What                                | Convention                                                | Example                             |
+| ----------------------------------- | --------------------------------------------------------- | ----------------------------------- |
+| Variables, functions                | `camelCase`                                               | `getDueReminders`                   |
+| React components, types, interfaces | `PascalCase`                                              | `NotePropertyForm`, `ScheduleInput` |
+| Files containing a component        | `PascalCase.tsx`                                          | `NotePropertyForm.tsx`              |
+| Other files (routes, utils, hooks)  | `kebab-case.ts`                                           | `get-due-reminders.ts`              |
+| Constants (module-level, immutable) | `UPPER_SNAKE_CASE`                                        | `MAX_PROPERTIES_PER_NOTE`           |
+| Database tables/columns (Prisma)    | `snake_case`, matching `04_Data_Model_and_ERD.md` exactly | `note_property_values`              |
+| React hooks                         | `useCamelCase`, prefixed `use`                            | `useReminderList`                   |
 
 One name per concept, used the same way in the database column, the API field and the UI label. Don't rename a concept moving between layers (e.g. don't call it `note_id` in the DB and `noteID` in a DTO and `parentNote` in a prop) — translation layers between tiers of this kind are themselves a bug risk, not a style preference.
 
@@ -71,9 +71,16 @@ Every API route validates its input with a **zod** schema before touching Prisma
 - Response shape is consistent across all routes:
   ```ts
   // success
-  { data: T }
+  {
+    data: T;
+  }
   // error
-  { error: { code: string; message: string } }
+  {
+    error: {
+      code: string;
+      message: string;
+    }
+  }
   ```
 - Authorization check happens first in every handler, before any data is read — check access to the Note before resolving its properties, schedules, attachments or exports (see `03_Technical_Architecture.md` §7, IDOR prevention).
 - Background/scheduled work (reminder due-scan) lives in its own route under `src/modules/reminders/api/cron/`, invoked only by Vercel Cron — never exposed as a normal user-facing endpoint.
@@ -86,7 +93,7 @@ Every API route validates its input with a **zod** schema before touching Prisma
 
 ## 7. Design tokens
 
-Design tokens (colors, spacing, typography) are authored as DTCG-format JSON and compiled via Style Dictionary into `src/shared/design-tokens/`. Components reference generated CSS variables or TS constants — never hardcode a color or spacing value inline. Visual direction and token values are produced using the `design-taste-frontend` skill when UI work begins; this section only fixes *where tokens live and how they reach components*, not their values.
+Design tokens (colors, spacing, typography) are authored as DTCG-format JSON and compiled via Style Dictionary into `src/shared/design-tokens/`. Components reference generated CSS variables or TS constants — never hardcode a color or spacing value inline. Visual direction and token values are produced using the `design-taste-frontend` skill when UI work begins; this section only fixes _where tokens live and how they reach components_, not their values.
 
 ## 8. Testing
 
@@ -109,4 +116,4 @@ Design tokens (colors, spacing, typography) are authored as DTCG-format JSON and
 ## 11. Migrations
 
 - Every schema change is a Prisma migration, committed alongside the code that needs it — never a hand-edited production schema.
-- A property-type or schedule-shape change that could break existing rows needs a migration *preview* path (per `04_Data_Model_and_ERD.md` §8) before it ships, not just a raw `ALTER`.
+- A property-type or schedule-shape change that could break existing rows needs a migration _preview_ path (per `04_Data_Model_and_ERD.md` §8) before it ships, not just a raw `ALTER`.
