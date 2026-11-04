@@ -1,26 +1,49 @@
 @import "tailwindcss";
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@import "../shared/design-tokens/tokens.css";
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --font-sans: var(--font-public-sans), var(--font);
+  --font-mono: var(--font-ibm-plex-mono), var(--mono);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-border: var(--border);
+  --color-rule: var(--rule);
+  --color-control: var(--control);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-warning: var(--warning);
+  --color-pill-neutral-bg: var(--pill-neutral-bg);
+  --color-pill-neutral-ink: var(--pill-neutral-ink);
+
+  /* Kept for any leftover usage of the create-next-app default tokens. */
+  --color-background: var(--ground);
+  --color-foreground: var(--text);
+
+  --radius-card: var(--radius-card);
+  --radius-control: var(--radius-control);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--ground);
+  color: var(--text);
+  font-family: var(--font-sans);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

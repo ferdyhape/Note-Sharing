@@ -41,16 +41,23 @@ Ordered, structured task list from foundation through MVP. Check items off as th
 
 - [x] Note detail screen (editor + properties + schedule + reminder + sharing) built standalone, 10 direction options compared, merged into `design/note-detail/final-notula.html` (dark/light toggle)
 - [x] Design tokens drafted (DTCG JSON) extracted from `final-notula.html` (`src/shared/design-tokens/`)
-- [ ] Standalone UI reference built for remaining core screens: Calendar, standalone Reminders list, Dashboard/All Notes
-- [ ] UI reference reviewed and approved as the visual baseline before backend wiring
+- [x] `final-notula.html` approved as the visual baseline (icon-rail shell, row-based tidy layout, hemat accent, light/dark toggle)
+- [ ] Remaining core screens (Calendar, standalone Reminders list, Dashboard/All Notes) designed just-in-time within the phase that builds them, not upfront
 
 ## Phase 1 — Notes foundation
 
 - [ ] Auth (email+password + Google OAuth)
+  - [x] Auth.js wired (`src/shared/lib/auth.ts`): Credentials (bcrypt) + Google providers, Prisma adapter, JWT sessions, `trustHost` for Vercel
+  - [x] `POST /api/auth/register` (email+password sign-up)
+  - [ ] Sign-in / sign-up pages (UI)
+  - [ ] Google OAuth exercised end-to-end (local `.env` still has empty `GOOGLE_CLIENT_ID`/`SECRET` — only set in Vercel so far)
 - [ ] Private Note CRUD
+  - [x] `GET/POST /api/notes`, `GET/PATCH/DELETE /api/notes/[id]` — ownership + share-role checked before every read (`src/shared/lib/note-access.ts`), DELETE is owner-only, soft delete via `deletedAt`
+  - [ ] Note editor / list UI that calls these routes
 - [ ] Rich editor (TipTap) wired to Note content
 - [ ] Autosave with visible save state
 - [ ] Note listing, search, archive
+- [x] App shell UI (`src/shared/components/AppShell.tsx`, `ThemeToggle.tsx`) — icon rail (desktop) / top bar + bottom nav (mobile), ported from `final-notula.html`; verified in both dev and a real `next build && next start`, light and dark, desktop and mobile
 
 ## Phase 2 — Dynamic properties
 
