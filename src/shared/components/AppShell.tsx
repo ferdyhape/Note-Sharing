@@ -41,9 +41,11 @@ const railLinkActiveClass = "bg-raised text-accent";
 
 export function AppShell({
   active = "notes",
+  shareHref,
   children,
 }: {
   active?: ActiveSection;
+  shareHref?: string;
   children: ReactNode;
 }) {
   return (
@@ -66,13 +68,15 @@ export function AppShell({
         </span>
         <span className="flex-1" />
         <ThemeToggle className="flex h-[34px] w-[34px] items-center justify-center rounded-full text-muted hover:bg-raised hover:text-text" />
-        <button
-          type="button"
-          aria-label="Share note"
-          className="flex h-[34px] w-[34px] items-center justify-center rounded-full text-muted hover:bg-raised hover:text-text"
-        >
-          <ShareIcon className="h-[17px] w-[17px]" />
-        </button>
+        {shareHref && (
+          <Link
+            href={shareHref}
+            aria-label="Share note"
+            className="flex h-[34px] w-[34px] items-center justify-center rounded-full text-muted hover:bg-raised hover:text-text"
+          >
+            <ShareIcon className="h-[17px] w-[17px]" />
+          </Link>
+        )}
       </header>
 
       {/* Desktop icon rail */}

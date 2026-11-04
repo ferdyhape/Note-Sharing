@@ -86,10 +86,10 @@ Ordered, structured task list from foundation through MVP. Check items off as th
 
 ## Phase 5 — Sharing & export
 
-- [ ] Owner/Editor/Viewer roles and authorization checks
-- [ ] Share invitation flow
+- [x] Owner/Editor/Viewer roles and authorization checks — edit and Owner-only share-management policies are explicit; Note share grant, role change and revoke are enforced server-side
+- [x] Share invitation flow for registered accounts — Owner grants Viewer/Editor by email and the recipient receives an in-app notice; unregistered addresses must register first
 - [ ] XLSX/CSV/JSON export
-- [ ] Authorization/cross-user security tests
+- [ ] Authorization/cross-user security tests — role-policy tests and cross-user Notification/Reminder smoke checks exist; a full automated route matrix remains open
 
 ## Phase 6 — Advanced capabilities
 

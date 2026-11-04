@@ -1,6 +1,8 @@
 import { prisma } from "@/shared/lib/prisma";
+import type { NoteAccessLevel } from "./note-permissions";
 
-export type NoteAccessLevel = "OWNER" | "EDITOR" | "VIEWER" | null;
+export { canEdit } from "./note-permissions";
+export type { NoteAccessLevel } from "./note-permissions";
 
 /**
  * Single place every Note-scoped route checks access through (03_Technical_Architecture.md
@@ -18,8 +20,4 @@ export async function getNoteAccess(noteId: string, userId: string): Promise<Not
   if (!note) return null;
   if (note.ownerId === userId) return "OWNER";
   return note.shares[0]?.role ?? null;
-}
-
-export function canEdit(level: NoteAccessLevel): boolean {
-  return level === "OWNER" || level === "EDITOR";
 }

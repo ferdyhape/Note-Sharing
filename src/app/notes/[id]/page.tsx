@@ -12,6 +12,8 @@ import type { ScheduleDTO } from "@/modules/scheduling/types";
 import { resolveScheduleTimezone } from "@/shared/lib/schedule";
 import { ReminderPanel } from "@/modules/reminders/components/ReminderPanel";
 import type { ReminderDTO, ReminderRecipientOption } from "@/modules/reminders/types";
+import { SharePanel } from "@/modules/sharing/components/SharePanel";
+import type { ShareDTO } from "@/modules/sharing/types";
 
 export default async function NoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -24,7 +26,12 @@ export default async function NoteDetailPage({ params }: { params: Promise<{ id:
   const [note, properties, schedules, reminders, recipientShares, user] = await Promise.all([
     prisma.note.findUniqueOrThrow({
       where: { id },
-      select: { id: true, title: true, contentJson: true },
+      select: {
+        id: true,
+        title: true,
+        contentJson: true,
+        owner: { select: { name: true, email: true } },
+      },
     }),
     prisma.noteProperty.findMany({
       where: { noteId: id },
@@ -44,20 +51,49 @@ export default async function NoteDetailPage({ params }: { params: Promise<{ id:
     prisma.noteShare.findMany({
       where: { noteId: id },
       orderBy: { createdAt: "asc" },
-      select: { role: true, user: { select: { id: true, name: true } } },
+      select: {
+        id: true,
+        userId: true,
+        role: true,
+        createdAt: true,
+        user: { select: { id: true, name: true, email: true } },
+      },
     }),
     prisma.user.findUnique({ where: { id: session.user.id }, select: { timezone: true } }),
   ]);
   const scheduleTimezone = resolveScheduleTimezone(undefined, user?.timezone);
 
   return (
-    <AppShell active="notes">
+    <AppShell
+      active="notes"
+      shareHref={access === "OWNER" ? `/notes/${note.id}#sharing` : undefined}
+    >
       <NoteEditorClient
         noteId={note.id}
         initialTitle={note.title}
         initialContentJson={note.contentJson as JSONContent}
         accessLevel={access}
       />
+      {access === "OWNER" && (
+        <SharePanel
+          key={recipientShares.map((share) => `${share.id}:${share.role}`).join("|")}
+          noteId={note.id}
+          owner={{ name: note.owner.name, email: note.owner.email }}
+          initialShares={
+            JSON.parse(
+              JSON.stringify(
+                recipientShares.map((share) => ({
+                  id: share.id,
+                  userId: share.userId,
+                  role: share.role,
+                  createdAt: share.createdAt,
+                  user: share.user,
+                })),
+              ),
+            ) as ShareDTO[]
+          }
+        />
+      )}
       <SchedulePanel
         noteId={note.id}
         initialSchedules={JSON.parse(JSON.stringify(schedules)) as ScheduleDTO[]}
