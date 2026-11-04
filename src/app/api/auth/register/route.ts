@@ -1,13 +1,7 @@
-import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/shared/lib/prisma";
 import { apiData, apiError } from "@/shared/lib/api-response";
-
-const registerSchema = z.object({
-  name: z.string().min(1).max(100),
-  email: z.string().email(),
-  password: z.string().min(8).max(200),
-});
+import { registerSchema } from "@/shared/lib/validation/auth";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);

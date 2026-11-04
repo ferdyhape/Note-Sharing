@@ -46,18 +46,18 @@ Ordered, structured task list from foundation through MVP. Check items off as th
 
 ## Phase 1 — Notes foundation
 
-- [ ] Auth (email+password + Google OAuth)
+- [x] Auth (email+password + Google OAuth) — end-to-end verified: register → auto sign-in → `/notes`; re-visiting `/login` while signed in redirects away; signed-out visits to `/notes` redirect to `/login` (`src/middleware.ts`)
   - [x] Auth.js wired (`src/shared/lib/auth.ts`): Credentials (bcrypt) + Google providers, Prisma adapter, JWT sessions, `trustHost` for Vercel
-  - [x] `POST /api/auth/register` (email+password sign-up)
-  - [ ] Sign-in / sign-up pages (UI)
-  - [ ] Google OAuth exercised end-to-end (local `.env` still has empty `GOOGLE_CLIENT_ID`/`SECRET` — only set in Vercel so far)
-  - [ ] `NEXTAUTH_SECRET`/`NEXTAUTH_URL` set in Vercel (only in local `.env` so far — production Auth.js will error without them)
-- [ ] Private Note CRUD
+  - [x] `POST /api/auth/register` (email+password sign-up), validated via shared `src/shared/lib/validation/auth.ts`
+  - [x] Sign-in / sign-up pages (`src/app/login`, `src/app/register`)
+  - [ ] Google OAuth exercised end-to-end (local `.env` still has empty `GOOGLE_CLIENT_ID`/`SECRET` — only set in Vercel so far; credentials path is verified)
+  - [x] `NEXTAUTH_SECRET`/`NEXTAUTH_URL` set in Vercel
+- [x] Private Note CRUD — end-to-end verified: create → edit title+body → autosave → reload persists → shows in list
   - [x] `GET/POST /api/notes`, `GET/PATCH/DELETE /api/notes/[id]` — ownership + share-role checked before every read (`src/shared/lib/note-access.ts`), DELETE is owner-only, soft delete via `deletedAt`
-  - [ ] Note editor / list UI that calls these routes
-- [ ] Rich editor (TipTap) wired to Note content
-- [ ] Autosave with visible save state
-- [ ] Note listing, search, archive
+  - [x] Note editor / list UI (`src/app/notes/page.tsx`, `src/app/notes/[id]/page.tsx`)
+- [x] Rich editor (TipTap) wired to Note content (`src/shared/components/RichEditor.tsx`, StarterKit)
+- [x] Autosave with visible save state (`NoteEditorClient.tsx` — debounced, accumulates pending field changes so a title edit followed quickly by a body edit doesn't drop the title; fixed a real bug here, see WORKLOG)
+- [ ] Note search, archive (listing itself works; no search box or archive action in the UI yet — the API already supports a `status` filter)
 - [x] App shell UI (`src/shared/components/AppShell.tsx`, `ThemeToggle.tsx`) — icon rail (desktop) / top bar + bottom nav (mobile), ported from `final-notula.html`; verified in both dev and a real `next build && next start`, light and dark, desktop and mobile
 
 ## Phase 2 — Dynamic properties

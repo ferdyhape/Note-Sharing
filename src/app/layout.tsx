@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Public_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+import { Providers } from "./providers";
 
 // The approved shell design (design/note-detail/final-notula.html) uses
 // Public Sans + IBM Plex Mono — the scaffold's original Geist loaders were
@@ -48,7 +49,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }
