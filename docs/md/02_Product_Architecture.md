@@ -115,5 +115,10 @@ The product is Note-centric. A Note is the primary user-owned content object. Op
 | Property integration | Hybrid recommendation + explicit activation | Agreed |
 | Schedule and Reminder | Separate domain concepts | Agreed |
 | Multi-user | Private and shared Notes | Agreed |
-| Real-time co-editing | Not assumed for MVP | Open |
-| Multiple schedules per Note | Architecture should allow; UX policy open | Open |
+| Real-time co-editing | Not supported; standard persisted save for MVP | Agreed |
+| Multiple schedules per Note | Allowed: a Note may have many independent schedules | Agreed |
+| Editor permission scope | Editor can edit shared Note's content, properties, schedules and reminders; cannot manage sharing or delete | Agreed |
+| Reminder recipient eligibility | Recipient must already hold Note access (Viewer/Editor) via sharing | Agreed |
+| Floating/timezone-less schedules | Not supported; every schedule has explicit timezone, default Asia/Jakarta | Agreed |
+| Property value history | Required: values retain change history | Agreed |
+| MVP scope breadth | Recurring, full property type set, independent reminders and property filtering included in MVP | Agreed |

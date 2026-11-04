@@ -19,18 +19,23 @@ Use a modular monolith for the first production version, with clear domain bound
 
 ## 2. Technology selection guidance
 
-The exact stack is not yet selected. The following are recommendations, not fixed decisions.
+### Decided (4 November 2026)
 
-| Concern | Recommended direction | Why |
+| Concern | Decision | Why |
 | --- | --- | --- |
-| Frontend | Modern TypeScript web framework (e.g. React-based framework) | Component ecosystem and rich interactive UI. |
-| Rich editor | TipTap/ProseMirror or equivalent | Extensible schema, custom nodes and editor ecosystem. |
-| Backend | Laravel or a TypeScript backend, selected based on implementation preference | Both can support modular domain services and background jobs. |
-| Database | PostgreSQL | Relational integrity, JSONB for typed configuration, robust indexing. |
-| Queue | Redis-backed queue or database-backed queue initially | Reliable asynchronous reminder and export processing. |
-| Push | Web Push API + Service Worker + VAPID | Browser push without requiring the page to remain open. |
-| File storage | S3-compatible object storage | Scalable attachment and export storage. |
+| Frontend + Backend | Next.js (TypeScript), full-stack in one codebase | One language end to end; API routes avoid a separate backend service; mature PWA tooling (next-pwa / vite-plugin-pwa pattern). |
+| Rich editor | TipTap/ProseMirror | Extensible schema, custom nodes, native React integration. |
+| Database | PostgreSQL via Neon (serverless Postgres) | Relational integrity, JSONB for typed property configuration, scales to zero, no database server to operate. |
+| ORM | Prisma | Type-safe queries matching the TypeScript codebase; migrations tooling comparable to Eloquent. |
+| Queue / scheduling | Upstash Redis + Vercel Cron | Due-reminder scanning triggered on a schedule; Upstash gives idempotency/queue state without a persistent worker process. |
+| Hosting | Vercel | Zero-config git-push deploy; scales to zero; no server to patch or maintain. |
+| Push | Web Push API + Service Worker + VAPID (`web-push` npm package) | Browser push without requiring the page to remain open. |
+| File storage | S3-compatible object storage (e.g. Cloudflare R2 or AWS S3) | Scalable attachment and export storage, decoupled from the app deployment. |
 | Calendar recurrence | RRULE-compatible recurrence representation plus exception records | Established recurrence semantics. |
+
+### Rationale
+
+Chosen over a Laravel backend and over self-hosting on the existing VPS: the VPS already runs mail hosting, a control panel and multiple other sites on 1 vCPU / ~1GB RAM with little headroom, so adding a persistent server process there risks those existing services. A serverless stack adds zero load to that VPS, costs effectively nothing at this project's scale, and needs no server administration — the best match for a solo-maintained private project where development time is the scarcer resource. Self-hosting (Laravel or a Go backend) remains a valid later migration if resource needs change; it is not required now.
 
 
 ## 3. Logical data boundaries
@@ -47,6 +52,8 @@ The exact stack is not yet selected. The following are recommendations, not fixe
 ## 4. Scheduling and recurrence
 
 - Persist instants in UTC while retaining the IANA timezone used to interpret user-entered local times and recurring wall-clock rules.
+- Floating (timezone-less) schedules are not supported; default to Asia/Jakarta when the user has not set a timezone.
+- A Note may have multiple independent schedules; each is persisted and queried as a separate row, not merged into one.
 - Represent all-day dates as date values or explicit all-day semantics, not as arbitrary midnight UTC timestamps.
 - Represent date-only, timed and date-range modes explicitly to avoid ambiguous null combinations.
 - Use RRULE-like recurrence rules with explicit DTSTART/timezone and exception records.
@@ -99,7 +106,7 @@ The exact stack is not yet selected. The following are recommendations, not fixe
 
 ## 9. Deployment topology
 
-Initial deployment can use one web application/API deployment, one worker deployment, PostgreSQL, Redis/queue, object storage and HTTPS. The worker can run separately from web requests. The architecture does not require microservices for MVP.
+Decided: fully serverless. Next.js deployed on Vercel (web + API routes, HTTPS included); Neon for PostgreSQL (scales to zero); Upstash Redis for queue/idempotency state; Vercel Cron triggers a scheduled API route that scans due reminders instead of a persistent worker process; S3-compatible storage (e.g. Cloudflare R2) for attachments and exports. No VPS, container host or always-on process is required or used for this project. The architecture does not require microservices for MVP.
 
 ## 10. Technical risks
 

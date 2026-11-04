@@ -10,11 +10,11 @@ Build a usable vertical slice early, then expand. Keep a modular monolith and de
 | --- | --- | --- |
 | 0. Discovery & foundation | Finalize decisions and engineering foundation | PRD review, UX wireframes, repo setup, environments, auth/data model baseline. |
 | 1. Notes foundation | Core writing experience | Auth, private Notes, rich editor, autosave, listing, search, archive. |
-| 2. Dynamic properties | Flexible Note metadata | Per-Note property definitions, core input types, validation, property values, basic table projection. |
-| 3. Scheduling & Calendar | Time-aware Notes | Date/all-day, timed, range schedules, month/week/day/agenda calendar, timezone behavior. |
-| 4. Reminder & push | Reliable reminders | Reminder rules, recipient preferences, in-app notifications, service worker, Web Push, worker and delivery logs. |
+| 2. Dynamic properties | Flexible Note metadata | Per-Note property definitions across all ten supported types, validation, property values with change history, basic table projection, property-based filtering. |
+| 3. Scheduling & Calendar | Time-aware Notes | Date/all-day, timed, range schedules, multiple independent schedules per Note, recurring rules, month/week/day/agenda calendar, timezone behavior (default Asia/Jakarta). |
+| 4. Reminder & push | Reliable reminders | Reminder rules including schedule-linked and independent fixed-time reminders, recipient preferences, in-app notifications, service worker, Web Push, worker and delivery logs. |
 | 5. Sharing & export | Multi-user workflows | Owner/Editor/Viewer, shared Notes, XLSX/CSV/JSON export, authorization tests. |
-| 6. Advanced capabilities | Power and polish | Recurring exceptions, relation properties, board/gallery, PDF/Markdown export, analytics, formula/rollup. |
+| 6. Advanced capabilities | Power and polish | Recurring exceptions, board/gallery, PDF/Markdown export, analytics, formula/rollup. |
 
 
 ## 2. MVP priority recommendation
@@ -22,9 +22,9 @@ Build a usable vertical slice early, then expand. Keep a modular monolith and de
 
 | Priority | Features |
 | --- | --- |
-| P0 | Authentication, private Note CRUD, rich editor, autosave, basic custom properties, date/time schedule, calendar, simple reminders, push opt-in, access isolation. |
+| P0 | Authentication, private Note CRUD, rich editor, autosave, custom properties across all ten supported types with value history, multiple independent schedules per Note with recurring rules, calendar, reminders (schedule-linked and independent fixed-time), property-based filtering, push opt-in, access isolation. |
 | P1 | Basic sharing roles, multi-device push subscriptions, table projection, XLSX/CSV/JSON export, tags, attachments. |
-| P2 | Recurring exceptions, Relation property, Board/Gallery, advanced filters, formula/rollup, analytics, PDF/Markdown export. |
+| P2 | Recurring exceptions, Board/Gallery, advanced multi-condition filters, formula/rollup, analytics, PDF/Markdown export. |
 
 
 ## 3. Acceptance criteria by workflow
@@ -42,6 +42,9 @@ Build a usable vertical slice early, then expand. Keep a modular monolith and de
 | Push opt-in | A user can subscribe a browser/device, revoke it and continue using in-app notifications. |
 | Sharing | Viewer cannot edit; Editor can perform allowed edits; revoked users lose access. |
 | Export | Export includes selected authorized Notes and custom property columns; missing values are handled consistently. |
+| Property filtering | Filtering Notes by a custom property value returns the correct authorized subset. |
+| Property history | Editing a property value preserves the prior value in history without data loss. |
+| Independent reminder | A fixed-time reminder with no schedule fires and delivers correctly, with the recipient already holding Note access. |
 
 
 ## 4. Test strategy
@@ -73,4 +76,4 @@ Build a usable vertical slice early, then expand. Keep a modular monolith and de
 | Recurrence complexity | Can create calendar/reminder edge cases. | Limit initial supported rules; expand with tests. |
 | Browser push support | Varies by browser/platform and permission. | In-app fallback and transparent capability checks. |
 | Shared editing concurrency | Potential overwrites and permission complexity. | Defer real-time co-editing; use conflict/version handling initially. |
-| Scope expansion | May delay usable MVP. | Protect P0 scope and place advanced features in later phases. |
+| Scope expansion | Decided P0 now includes recurring, full property type set, independent reminders and filtering — wider than a minimal slice, raising schedule and edge-case risk. | Build thin vertical slices per capability inside Phases 2–4; add internal checkpoints; keep remaining advanced features (exceptions, board/gallery, formula/rollup, analytics) out of P0. |

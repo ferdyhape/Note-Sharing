@@ -68,7 +68,8 @@ Private project documentation • Draft v0.1 • 4 November 2026
 ## 7. Reminder and notification UX
 
 - Reminder setup is separate from browser push permission.
-- Users can choose reminder timing and recipients where sharing applies.
+- Users can choose reminder timing; recipient selection only lists users who already have Viewer/Editor access to the Note.
+- A reminder can be created without a schedule, using a fixed date/time picker.
 - Push opt-in is requested contextually, not on first page load without explanation.
 - Settings show registered devices and allow revocation.
 - In-app notifications remain available when push is disabled.
