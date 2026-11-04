@@ -5,8 +5,12 @@ import { useRef, useState } from "react";
 import { Temporal } from "@js-temporal/polyfill";
 import type { ScheduleOccurrence } from "@/modules/scheduling/lib/occurrences";
 import { formatScheduleDate, formatScheduleTime } from "@/modules/scheduling/lib/schedule-time";
+import { isInMonth, monthGridDates, shiftMonth } from "@/modules/calendar/lib/month-grid";
 
 type AgendaEvent = ScheduleOccurrence & { noteTitle: string };
+type CalendarView = "AGENDA" | "MONTH";
+
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 function displayDate(date: string, locale = "en-ID") {
   return new Intl.DateTimeFormat(locale, {
@@ -51,6 +55,14 @@ function rangeLabel(fromDate: string, toDate: string) {
   return `${from} – ${to}`;
 }
 
+function monthLabel(month: string) {
+  return new Intl.DateTimeFormat("en-ID", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${month.slice(0, 7)}-01T00:00:00.000Z`));
+}
+
 function shiftDate(value: string, days: number) {
   return Temporal.PlainDate.from(value).add({ days }).toString();
 }
@@ -65,21 +77,27 @@ export function CalendarAgenda({
   initialEvents: AgendaEvent[];
 }) {
   const [fromDate, setFromDate] = useState(initialFromDate);
+  const [month, setMonth] = useState(`${initialFromDate.slice(0, 7)}-01`);
+  const [selectedDate, setSelectedDate] = useState(initialFromDate);
+  const [view, setView] = useState<CalendarView>("AGENDA");
   const [events, setEvents] = useState(initialEvents);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestId = useRef(0);
-  const toDate = shiftDate(fromDate, 13);
+  const monthDates = monthGridDates(month);
+  const monthFromDate = monthDates[0]!.toString();
+  const monthToDate = monthDates.at(-1)!.toString();
+  const toDate = view === "AGENDA" ? shiftDate(fromDate, 13) : monthToDate;
+  const rangeFromDate = view === "AGENDA" ? fromDate : monthFromDate;
+  const rangeText = view === "AGENDA" ? rangeLabel(fromDate, toDate) : monthLabel(month);
   const groupedEvents = new Map<string, AgendaEvent[]>();
   for (const event of events) {
     const date = eventDate(event, timezone);
     groupedEvents.set(date, [...(groupedEvents.get(date) ?? []), event]);
   }
 
-  async function loadRange(nextFromDate: string) {
+  async function loadRange(nextFromDate: string, nextToDate: string) {
     const nextRequestId = ++requestId.current;
-    const nextToDate = shiftDate(nextFromDate, 13);
-    setFromDate(nextFromDate);
     setLoading(true);
     setError(null);
     try {
@@ -102,11 +120,52 @@ export function CalendarAgenda({
     }
   }
 
-  function goToToday() {
-    loadRange(Temporal.Now.instant().toZonedDateTimeISO(timezone).toPlainDate().toString()).catch(
-      () => {},
-    );
+  function changeView(nextView: CalendarView) {
+    if (nextView === view) return;
+    setView(nextView);
+    if (nextView === "MONTH") {
+      const nextMonth = `${fromDate.slice(0, 7)}-01`;
+      const dates = monthGridDates(nextMonth);
+      const nextSelectedDate =
+        fromDate.slice(0, 7) === nextMonth.slice(0, 7) ? fromDate : nextMonth;
+      setMonth(nextMonth);
+      setSelectedDate(nextSelectedDate);
+      void loadRange(dates[0]!.toString(), dates.at(-1)!.toString());
+      return;
+    }
+    setFromDate(selectedDate);
+    void loadRange(selectedDate, shiftDate(selectedDate, 13));
   }
+
+  function navigateRange(direction: -1 | 1) {
+    if (view === "AGENDA") {
+      const nextFromDate = shiftDate(fromDate, direction * 14);
+      setFromDate(nextFromDate);
+      void loadRange(nextFromDate, shiftDate(nextFromDate, 13));
+      return;
+    }
+
+    const nextMonth = shiftMonth(month, direction);
+    const dates = monthGridDates(nextMonth);
+    setMonth(nextMonth);
+    setSelectedDate(nextMonth);
+    void loadRange(dates[0]!.toString(), dates.at(-1)!.toString());
+  }
+
+  function goToToday() {
+    const today = Temporal.Now.instant().toZonedDateTimeISO(timezone).toPlainDate().toString();
+    setFromDate(today);
+    setMonth(`${today.slice(0, 7)}-01`);
+    setSelectedDate(today);
+    if (view === "AGENDA") {
+      void loadRange(today, shiftDate(today, 13));
+      return;
+    }
+    const dates = monthGridDates(today);
+    void loadRange(dates[0]!.toString(), dates.at(-1)!.toString());
+  }
+
+  const selectedDayEvents = groupedEvents.get(selectedDate) ?? [];
 
   return (
     <section aria-labelledby="calendar-heading">
@@ -116,35 +175,54 @@ export function CalendarAgenda({
             Calendar
           </h1>
           <p className="mt-1 text-[13px] text-muted">
-            {rangeLabel(fromDate, toDate)} · {timezone}
+            {rangeText} · {timezone}
           </p>
         </div>
-        <nav aria-label="Calendar range" className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => loadRange(shiftDate(fromDate, -14))}
-            disabled={loading}
-            className="min-h-11 rounded-control border border-control px-3 text-[12px] font-medium text-text hover:bg-raised disabled:opacity-60 min-[900px]:min-h-8"
+        <div className="flex flex-wrap items-center gap-3">
+          <div
+            role="group"
+            aria-label="Calendar view"
+            className="flex rounded-control border border-control p-0.5"
           >
-            Previous
-          </button>
-          <button
-            type="button"
-            onClick={goToToday}
-            disabled={loading}
-            className="min-h-11 rounded-control bg-text px-3 text-[12px] font-medium text-ground disabled:opacity-60 min-[900px]:min-h-8"
-          >
-            Today
-          </button>
-          <button
-            type="button"
-            onClick={() => loadRange(shiftDate(fromDate, 14))}
-            disabled={loading}
-            className="min-h-11 rounded-control border border-control px-3 text-[12px] font-medium text-text hover:bg-raised disabled:opacity-60 min-[900px]:min-h-8"
-          >
-            Next
-          </button>
-        </nav>
+            {(["AGENDA", "MONTH"] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={view === option}
+                onClick={() => changeView(option)}
+                className={`min-h-10 rounded-[4px] px-3 text-[12px] font-medium min-[900px]:min-h-7 ${view === option ? "bg-text text-ground" : "text-muted hover:text-text"}`}
+              >
+                {option === "AGENDA" ? "Agenda" : "Month"}
+              </button>
+            ))}
+          </div>
+          <nav aria-label="Calendar range" className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => navigateRange(-1)}
+              disabled={loading}
+              className="min-h-11 rounded-control border border-control px-3 text-[12px] font-medium text-text hover:bg-raised disabled:opacity-60 min-[900px]:min-h-8"
+            >
+              {view === "AGENDA" ? "Previous" : "Previous month"}
+            </button>
+            <button
+              type="button"
+              onClick={goToToday}
+              disabled={loading}
+              className="min-h-11 rounded-control bg-text px-3 text-[12px] font-medium text-ground disabled:opacity-60 min-[900px]:min-h-8"
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              onClick={() => navigateRange(1)}
+              disabled={loading}
+              className="min-h-11 rounded-control border border-control px-3 text-[12px] font-medium text-text hover:bg-raised disabled:opacity-60 min-[900px]:min-h-8"
+            >
+              {view === "AGENDA" ? "Next" : "Next month"}
+            </button>
+          </nav>
+        </div>
       </header>
 
       {loading && (
@@ -159,14 +237,14 @@ export function CalendarAgenda({
           </p>
           <button
             type="button"
-            onClick={() => loadRange(fromDate)}
+            onClick={() => loadRange(rangeFromDate, toDate)}
             className="min-h-11 px-2 text-[12px] font-medium text-text underline underline-offset-2 min-[900px]:min-h-8"
           >
             Retry
           </button>
         </div>
       )}
-      {!loading && !error && events.length === 0 && (
+      {view === "AGENDA" && !loading && !error && events.length === 0 && (
         <div className="border-y border-rule py-5">
           <p className="text-[14px] font-medium text-text">Nothing scheduled in this range.</p>
           <Link
@@ -177,7 +255,69 @@ export function CalendarAgenda({
           </Link>
         </div>
       )}
-      {!error && events.length > 0 && (
+      {!error && view === "MONTH" && (
+        <div aria-busy={loading}>
+          <div className="grid grid-cols-7 border-y border-rule" aria-label={monthLabel(month)}>
+            {WEEKDAYS.map((day) => (
+              <div key={day} className="py-2 text-center text-[11px] font-medium text-muted">
+                {day}
+              </div>
+            ))}
+            {monthDates.map((date) => {
+              const dateValue = date.toString();
+              const dayEvents = groupedEvents.get(dateValue) ?? [];
+              const selected = selectedDate === dateValue;
+              return (
+                <button
+                  key={dateValue}
+                  type="button"
+                  aria-label={`${displayDate(dateValue)}${dayEvents.length ? `, ${dayEvents.length} scheduled` : ", no schedules"}`}
+                  aria-pressed={selected}
+                  onClick={() => setSelectedDate(dateValue)}
+                  className={`flex min-h-[58px] min-w-0 flex-col items-center justify-start gap-1 border-t border-rule px-0.5 py-2 text-[12px] min-[640px]:min-h-[76px] min-[640px]:items-start min-[640px]:px-2 ${!isInMonth(date, month) ? "text-faint" : "text-text"} ${selected ? "bg-raised" : "hover:bg-raised/60"}`}
+                >
+                  <span
+                    className={`flex h-6 min-w-6 items-center justify-center rounded-full tabular-nums ${selected ? "bg-text text-ground" : ""}`}
+                  >
+                    {date.day}
+                  </span>
+                  {dayEvents.length > 0 && (
+                    <span className="max-w-full truncate text-[10px] text-accent min-[640px]:text-[11px]">
+                      {dayEvents.length} {dayEvents.length === 1 ? "event" : "events"}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <section className="mt-5" aria-labelledby="selected-date-heading">
+            <h2 id="selected-date-heading" className="mb-2 text-[14px] font-semibold text-text">
+              {displayDate(selectedDate)}
+            </h2>
+            {selectedDayEvents.length === 0 ? (
+              <p className="border-t border-rule py-3 text-[13px] text-muted">Nothing scheduled.</p>
+            ) : (
+              <ul className="divide-y divide-rule border-t border-rule">
+                {selectedDayEvents.map((event) => (
+                  <li
+                    key={`${event.scheduleId}:${event.occurrenceKey}`}
+                    className="flex flex-col gap-1 py-3 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between"
+                  >
+                    <Link
+                      href={`/notes/${event.noteId}`}
+                      className="text-[14px] font-medium text-text hover:underline"
+                    >
+                      {event.noteTitle || "Untitled note"}
+                    </Link>
+                    <span className="text-[12px] text-muted">{eventTime(event)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      )}
+      {!error && view === "AGENDA" && events.length > 0 && (
         <div aria-busy={loading}>
           {[...groupedEvents.entries()]
             .sort(([left], [right]) => left.localeCompare(right))
