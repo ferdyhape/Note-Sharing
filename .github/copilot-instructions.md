@@ -1,8 +1,39 @@
 # Copilot instructions — Notula
 
-This repo was built so far with Claude Code; these notes exist so GitHub Copilot (or any other assistant) picks up the same conventions and doesn't relearn them the hard way. Read `docs/CODING_STANDARDS.md` first — it's the canonical source for naming, API shape, validation, commits, secrets, the Auth.js Edge/Node split, and the verification checklist. This file only adds operational habits that aren't "coding style" but matter just as much.
+This repo was built so far with Claude Code; these notes help GitHub Copilot and other assistants follow the same conventions. The Markdown files below are the active documentation. The legacy Word files under `docs/docx/` are not used; use their Markdown counterparts instead.
 
-Product/technical context: `docs/md/` (PRD, architecture, data model, UX spec), `docs/adr/` (one file per significant decision — read before changing anything an ADR covers), `docs/CHECKLIST.md` (phase-by-phase task list), `docs/WORKLOG.md` (dated narrative log — read the tail before starting new work, it has the "why" behind recent changes and real bugs found/fixed).
+## Documentation index
+
+Before implementation progress in a new task, read the active documents below for project context. Re-read the checklist and the newest worklog entry before choosing the next task, and revisit relevant docs/ADRs when a change touches their decisions. For follow-up work in the same session, previously read documents need not be reread unless they changed.
+
+### Product and technical documentation
+
+- [Documentation guide](../docs/md/00_README_Documentation_Guide.md)
+- [Product requirements (PRD)](../docs/md/01_PRD.md)
+- [Product architecture](../docs/md/02_Product_Architecture.md)
+- [Technical architecture](../docs/md/03_Technical_Architecture.md)
+- [Data model and ERD](../docs/md/04_Data_Model_and_ERD.md)
+- [UX and interaction specification](../docs/md/05_UX_Interaction_Specification.md)
+- [Development roadmap](../docs/md/06_Development_Roadmap.md)
+
+### Engineering and project state
+
+- [Coding standards](../docs/CODING_STANDARDS.md) — canonical source for structure, naming, APIs, validation, security and verification.
+- [Build checklist](../docs/CHECKLIST.md) — current feature status; mark items complete only after verification.
+- [Work log](../docs/WORKLOG.md) — dated implementation history; read the newest entry before starting.
+
+### Architecture decision records
+
+- [ADR index and authoring guide](../docs/adr/README.md)
+- [ADR-0001: Note-centric model, no mandatory Collection](../docs/adr/0001-note-centric-no-mandatory-collection.md)
+- [ADR-0002: Schedule, Reminder and Notification separation](../docs/adr/0002-schedule-reminder-notification-separation.md)
+- [ADR-0003: Sharing and permission model](../docs/adr/0003-sharing-permission-model.md)
+- [ADR-0004: Property value history](../docs/adr/0004-property-value-history.md)
+- [ADR-0005: Explicit timezone, default Asia/Jakarta](../docs/adr/0005-timezone-handling.md)
+- [ADR-0006: Expanded MVP scope](../docs/adr/0006-expanded-mvp-scope.md)
+- [ADR-0007: Technology stack](../docs/adr/0007-technology-stack.md)
+- [ADR-0008: Non-real-time shared editing](../docs/adr/0008-non-real-time-shared-editing.md)
+- [ADR-0009: Authentication strategy](../docs/adr/0009-auth-strategy.md)
 
 ## Before touching code
 
