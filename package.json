@@ -9,6 +9,7 @@
     "lint": "eslint",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
+    "postinstall": "prisma generate",
     "prepare": "husky"
   },
   "dependencies": {
