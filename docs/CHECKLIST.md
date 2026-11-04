@@ -51,6 +51,7 @@ Ordered, structured task list from foundation through MVP. Check items off as th
   - [x] `POST /api/auth/register` (email+password sign-up)
   - [ ] Sign-in / sign-up pages (UI)
   - [ ] Google OAuth exercised end-to-end (local `.env` still has empty `GOOGLE_CLIENT_ID`/`SECRET` — only set in Vercel so far)
+  - [ ] `NEXTAUTH_SECRET`/`NEXTAUTH_URL` set in Vercel (only in local `.env` so far — production Auth.js will error without them)
 - [ ] Private Note CRUD
   - [x] `GET/POST /api/notes`, `GET/PATCH/DELETE /api/notes/[id]` — ownership + share-role checked before every read (`src/shared/lib/note-access.ts`), DELETE is owner-only, soft delete via `deletedAt`
   - [ ] Note editor / list UI that calls these routes
