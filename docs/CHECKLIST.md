@@ -57,7 +57,7 @@ Ordered, structured task list from foundation through MVP. Check items off as th
   - [x] Note editor / list UI (`src/app/notes/page.tsx`, `src/app/notes/[id]/page.tsx`)
 - [x] Rich editor (TipTap) wired to Note content (`src/shared/components/RichEditor.tsx`, StarterKit)
 - [x] Autosave with visible save state (`NoteEditorClient.tsx` — debounced, accumulates pending field changes so a title edit followed quickly by a body edit doesn't drop the title; fixed a real bug here, see WORKLOG)
-- [ ] Note search, archive (listing itself works; no search box or archive action in the UI yet — the API already supports a `status` filter)
+- [x] Note search, archive — server-side title/body search preserves table/property filters; Archive/Restore actions use the existing status API and `/archive` lists archived Notes
 - [x] App shell UI (`src/shared/components/AppShell.tsx`, `ThemeToggle.tsx`) — icon rail (desktop) / top bar + bottom nav (mobile), ported from `final-notula.html`; verified in both dev and a real `next build && next start`, light and dark, desktop and mobile
 
 ## Phase 2 — Dynamic properties
