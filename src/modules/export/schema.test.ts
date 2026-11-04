@@ -5,6 +5,14 @@ describe("notesExportQuerySchema", () => {
   it("accepts filtered, selected, and single-Note export scopes", () => {
     expect(notesExportQuerySchema.safeParse({ format: "csv" }).success).toBe(true);
     expect(
+      notesExportQuerySchema.safeParse({ format: "markdown", scope: "note", noteId: "note-1" })
+        .success,
+    ).toBe(true);
+    expect(
+      notesExportQuerySchema.safeParse({ format: "pdf", scope: "selected", noteIds: ["note-1"] })
+        .success,
+    ).toBe(true);
+    expect(
       notesExportQuerySchema.safeParse({ format: "xlsx", scope: "selected", noteIds: ["note-1"] })
         .success,
     ).toBe(true);

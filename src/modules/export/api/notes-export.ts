@@ -6,6 +6,7 @@ import { formatPropertyValue } from "@/shared/lib/property-value";
 import { matchesNoteSearch } from "@/modules/notes/lib/search";
 import { buildTabularExport, tabularExportToCsv } from "@/modules/export/lib/notes-export";
 import { notesExportQuerySchema } from "@/modules/export/schema";
+import { notesToMarkdown, notesToPdf } from "@/modules/export/lib/document-export";
 
 function downloadResponse(body: BodyInit, contentType: string, filename: string) {
   return new Response(body, {
@@ -123,6 +124,33 @@ export async function GET(request: Request) {
     return downloadResponse(
       JSON.stringify(backup, null, 2),
       "application/json; charset=utf-8",
+      filename,
+    );
+  }
+
+  const documentNotes = filtered.map((note) => ({
+    title: note.title,
+    contentJson: note.contentJson,
+    contentText: note.contentText,
+    properties: note.properties.map((property) => ({
+      name: property.name,
+      type: property.type,
+      values: property.values,
+    })),
+    attachments: note.attachments,
+  }));
+
+  if (parsed.data.format === "markdown") {
+    return downloadResponse(
+      notesToMarkdown(documentNotes),
+      "text/markdown; charset=utf-8",
+      filename,
+    );
+  }
+  if (parsed.data.format === "pdf") {
+    return downloadResponse(
+      Buffer.from(await notesToPdf(documentNotes)),
+      "application/pdf",
       filename,
     );
   }

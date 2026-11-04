@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const notesExportQuerySchema = z
   .object({
-    format: z.enum(["csv", "xlsx", "json"]),
+    format: z.enum(["csv", "xlsx", "json", "markdown", "pdf"]),
     scope: z.enum(["filtered", "selected", "note"]).default("filtered"),
     noteIds: z.array(z.string().min(1)).max(100).default([]),
     noteId: z.string().min(1).optional(),

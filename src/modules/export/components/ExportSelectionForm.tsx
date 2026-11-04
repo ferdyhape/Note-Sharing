@@ -36,6 +36,8 @@ export function ExportSelectionForm({
             <option value="csv">CSV</option>
             <option value="xlsx">XLSX</option>
             <option value="json">JSON</option>
+            <option value="markdown">Markdown</option>
+            <option value="pdf">PDF</option>
           </select>
         </label>
         <button

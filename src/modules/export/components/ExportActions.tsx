@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-type ExportFormat = "csv" | "xlsx" | "json";
+type ExportFormat = "csv" | "xlsx" | "json" | "markdown" | "pdf";
 
 function exportHref(
   format: ExportFormat,
@@ -18,6 +18,8 @@ function exportHref(
 
 const LINK_CLASS =
   "flex min-h-11 items-center rounded-control px-2 text-[12px] font-medium text-text hover:bg-raised min-[900px]:min-h-8";
+const MENU_LINK_CLASS =
+  "flex min-h-10 items-center rounded-control px-3 text-[13px] text-text hover:bg-raised";
 
 export function ExportActions({
   search,
@@ -34,17 +36,27 @@ export function ExportActions({
 }) {
   const filters = { search, property, q: query };
   return (
-    <nav aria-label="Export current Notes" className="flex items-center gap-1">
-      <span className="px-1 text-[12px] text-muted">Export</span>
-      <Link href={exportHref("csv", scope, filters, noteId)} className={LINK_CLASS}>
-        CSV
-      </Link>
-      <Link href={exportHref("xlsx", scope, filters, noteId)} className={LINK_CLASS}>
-        XLSX
-      </Link>
-      <Link href={exportHref("json", scope, filters, noteId)} className={LINK_CLASS}>
-        JSON
-      </Link>
-    </nav>
+    <details className="relative">
+      <summary
+        aria-label="Export current Notes"
+        className={`${LINK_CLASS} cursor-pointer list-none`}
+      >
+        Export
+      </summary>
+      <nav
+        aria-label="Export formats"
+        className="absolute right-0 top-full z-20 mt-1 flex min-w-36 flex-col rounded-card border border-border bg-surface p-1"
+      >
+        {(["csv", "xlsx", "json", "markdown", "pdf"] as const).map((format) => (
+          <Link
+            key={format}
+            href={exportHref(format, scope, filters, noteId)}
+            className={MENU_LINK_CLASS}
+          >
+            {format === "xlsx" ? "Excel workbook" : format.toUpperCase()}
+          </Link>
+        ))}
+      </nav>
+    </details>
   );
 }
