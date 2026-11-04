@@ -5,10 +5,15 @@ import { useRef, useState } from "react";
 import { Temporal } from "@js-temporal/polyfill";
 import type { ScheduleOccurrence } from "@/modules/scheduling/lib/occurrences";
 import { formatScheduleDate, formatScheduleTime } from "@/modules/scheduling/lib/schedule-time";
-import { isInMonth, monthGridDates, shiftMonth } from "@/modules/calendar/lib/month-grid";
+import {
+  isInMonth,
+  monthGridDates,
+  shiftMonth,
+  weekGridDates,
+} from "@/modules/calendar/lib/month-grid";
 
 type AgendaEvent = ScheduleOccurrence & { noteTitle: string };
-type CalendarView = "AGENDA" | "MONTH";
+type CalendarView = "AGENDA" | "WEEK" | "MONTH";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -67,6 +72,36 @@ function shiftDate(value: string, days: number) {
   return Temporal.PlainDate.from(value).add({ days }).toString();
 }
 
+function SelectedDayEvents({ date, events }: { date: string; events: AgendaEvent[] }) {
+  return (
+    <section className="mt-5" aria-labelledby="selected-date-heading">
+      <h2 id="selected-date-heading" className="mb-2 text-[14px] font-semibold text-text">
+        {displayDate(date)}
+      </h2>
+      {events.length === 0 ? (
+        <p className="border-t border-rule py-3 text-[13px] text-muted">Nothing scheduled.</p>
+      ) : (
+        <ul className="divide-y divide-rule border-t border-rule">
+          {events.map((event) => (
+            <li
+              key={`${event.scheduleId}:${event.occurrenceKey}`}
+              className="flex flex-col gap-1 py-3 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between"
+            >
+              <Link
+                href={`/notes/${event.noteId}`}
+                className="text-[14px] font-medium text-text hover:underline"
+              >
+                {event.noteTitle || "Untitled note"}
+              </Link>
+              <span className="text-[12px] text-muted">{eventTime(event)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 export function CalendarAgenda({
   initialFromDate,
   timezone,
@@ -87,9 +122,19 @@ export function CalendarAgenda({
   const monthDates = monthGridDates(month);
   const monthFromDate = monthDates[0]!.toString();
   const monthToDate = monthDates.at(-1)!.toString();
-  const toDate = view === "AGENDA" ? shiftDate(fromDate, 13) : monthToDate;
-  const rangeFromDate = view === "AGENDA" ? fromDate : monthFromDate;
-  const rangeText = view === "AGENDA" ? rangeLabel(fromDate, toDate) : monthLabel(month);
+  const weekDates = weekGridDates(fromDate);
+  const weekFromDate = weekDates[0]!.toString();
+  const weekToDate = weekDates.at(-1)!.toString();
+  const toDate =
+    view === "AGENDA" ? shiftDate(fromDate, 13) : view === "WEEK" ? weekToDate : monthToDate;
+  const rangeFromDate =
+    view === "AGENDA" ? fromDate : view === "WEEK" ? weekFromDate : monthFromDate;
+  const rangeText =
+    view === "AGENDA"
+      ? rangeLabel(fromDate, toDate)
+      : view === "WEEK"
+        ? rangeLabel(weekFromDate, weekToDate)
+        : monthLabel(month);
   const groupedEvents = new Map<string, AgendaEvent[]>();
   for (const event of events) {
     const date = eventDate(event, timezone);
@@ -123,18 +168,29 @@ export function CalendarAgenda({
   function changeView(nextView: CalendarView) {
     if (nextView === view) return;
     setView(nextView);
+    const anchorDate = view === "AGENDA" ? fromDate : selectedDate;
     if (nextView === "MONTH") {
-      const nextMonth = `${fromDate.slice(0, 7)}-01`;
+      const nextMonth = `${anchorDate.slice(0, 7)}-01`;
       const dates = monthGridDates(nextMonth);
       const nextSelectedDate =
-        fromDate.slice(0, 7) === nextMonth.slice(0, 7) ? fromDate : nextMonth;
+        anchorDate.slice(0, 7) === nextMonth.slice(0, 7) ? anchorDate : nextMonth;
+      setFromDate(nextSelectedDate);
       setMonth(nextMonth);
       setSelectedDate(nextSelectedDate);
       void loadRange(dates[0]!.toString(), dates.at(-1)!.toString());
       return;
     }
-    setFromDate(selectedDate);
-    void loadRange(selectedDate, shiftDate(selectedDate, 13));
+    if (nextView === "WEEK") {
+      const dates = weekGridDates(anchorDate);
+      const nextWeekStart = dates[0]!.toString();
+      setFromDate(nextWeekStart);
+      setSelectedDate(anchorDate);
+      void loadRange(nextWeekStart, dates.at(-1)!.toString());
+      return;
+    }
+    setFromDate(anchorDate);
+    setSelectedDate(anchorDate);
+    void loadRange(anchorDate, shiftDate(anchorDate, 13));
   }
 
   function navigateRange(direction: -1 | 1) {
@@ -142,6 +198,15 @@ export function CalendarAgenda({
       const nextFromDate = shiftDate(fromDate, direction * 14);
       setFromDate(nextFromDate);
       void loadRange(nextFromDate, shiftDate(nextFromDate, 13));
+      return;
+    }
+
+    if (view === "WEEK") {
+      const nextWeekStart = shiftDate(weekFromDate, direction * 7);
+      const dates = weekGridDates(nextWeekStart);
+      setFromDate(nextWeekStart);
+      setSelectedDate(nextWeekStart);
+      void loadRange(dates[0]!.toString(), dates.at(-1)!.toString());
       return;
     }
 
@@ -159,6 +224,11 @@ export function CalendarAgenda({
     setSelectedDate(today);
     if (view === "AGENDA") {
       void loadRange(today, shiftDate(today, 13));
+      return;
+    }
+    if (view === "WEEK") {
+      const dates = weekGridDates(today);
+      void loadRange(dates[0]!.toString(), dates.at(-1)!.toString());
       return;
     }
     const dates = monthGridDates(today);
@@ -184,7 +254,7 @@ export function CalendarAgenda({
             aria-label="Calendar view"
             className="flex rounded-control border border-control p-0.5"
           >
-            {(["AGENDA", "MONTH"] as const).map((option) => (
+            {(["AGENDA", "WEEK", "MONTH"] as const).map((option) => (
               <button
                 key={option}
                 type="button"
@@ -192,7 +262,7 @@ export function CalendarAgenda({
                 onClick={() => changeView(option)}
                 className={`min-h-10 rounded-[4px] px-3 text-[12px] font-medium min-[900px]:min-h-7 ${view === option ? "bg-text text-ground" : "text-muted hover:text-text"}`}
               >
-                {option === "AGENDA" ? "Agenda" : "Month"}
+                {option === "AGENDA" ? "Agenda" : option === "WEEK" ? "Week" : "Month"}
               </button>
             ))}
           </div>
@@ -203,7 +273,11 @@ export function CalendarAgenda({
               disabled={loading}
               className="min-h-11 rounded-control border border-control px-3 text-[12px] font-medium text-text hover:bg-raised disabled:opacity-60 min-[900px]:min-h-8"
             >
-              {view === "AGENDA" ? "Previous" : "Previous month"}
+              {view === "AGENDA"
+                ? "Previous"
+                : view === "WEEK"
+                  ? "Previous week"
+                  : "Previous month"}
             </button>
             <button
               type="button"
@@ -219,7 +293,7 @@ export function CalendarAgenda({
               disabled={loading}
               className="min-h-11 rounded-control border border-control px-3 text-[12px] font-medium text-text hover:bg-raised disabled:opacity-60 min-[900px]:min-h-8"
             >
-              {view === "AGENDA" ? "Next" : "Next month"}
+              {view === "AGENDA" ? "Next" : view === "WEEK" ? "Next week" : "Next month"}
             </button>
           </nav>
         </div>
@@ -253,6 +327,34 @@ export function CalendarAgenda({
           >
             Open Notes
           </Link>
+        </div>
+      )}
+      {!error && view === "WEEK" && (
+        <div aria-busy={loading}>
+          <div className="grid grid-cols-7 border-y border-rule">
+            {weekDates.map((date) => {
+              const dateValue = date.toString();
+              const dayEvents = groupedEvents.get(dateValue) ?? [];
+              const selected = selectedDate === dateValue;
+              return (
+                <button
+                  key={dateValue}
+                  type="button"
+                  aria-label={`${displayDate(dateValue)}${dayEvents.length ? `, ${dayEvents.length} scheduled` : ", no schedules"}`}
+                  aria-pressed={selected}
+                  onClick={() => setSelectedDate(dateValue)}
+                  className={`flex min-h-[60px] min-w-0 flex-col items-center justify-center gap-1 border-r border-rule px-0.5 py-2 text-[11px] last:border-r-0 min-[640px]:min-h-[76px] min-[640px]:text-[12px] ${selected ? "bg-raised text-text" : "text-muted hover:bg-raised/60"}`}
+                >
+                  <span>{WEEKDAYS[date.dayOfWeek - 1]}</span>
+                  <span className="tabular-nums">{date.day}</span>
+                  {dayEvents.length > 0 && (
+                    <span className="text-[10px] text-accent">{dayEvents.length}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <SelectedDayEvents date={selectedDate} events={selectedDayEvents} />
         </div>
       )}
       {!error && view === "MONTH" && (
@@ -290,31 +392,7 @@ export function CalendarAgenda({
               );
             })}
           </div>
-          <section className="mt-5" aria-labelledby="selected-date-heading">
-            <h2 id="selected-date-heading" className="mb-2 text-[14px] font-semibold text-text">
-              {displayDate(selectedDate)}
-            </h2>
-            {selectedDayEvents.length === 0 ? (
-              <p className="border-t border-rule py-3 text-[13px] text-muted">Nothing scheduled.</p>
-            ) : (
-              <ul className="divide-y divide-rule border-t border-rule">
-                {selectedDayEvents.map((event) => (
-                  <li
-                    key={`${event.scheduleId}:${event.occurrenceKey}`}
-                    className="flex flex-col gap-1 py-3 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between"
-                  >
-                    <Link
-                      href={`/notes/${event.noteId}`}
-                      className="text-[14px] font-medium text-text hover:underline"
-                    >
-                      {event.noteTitle || "Untitled note"}
-                    </Link>
-                    <span className="text-[12px] text-muted">{eventTime(event)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+          <SelectedDayEvents date={selectedDate} events={selectedDayEvents} />
         </div>
       )}
       {!error && view === "AGENDA" && events.length > 0 && (

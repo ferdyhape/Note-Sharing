@@ -73,7 +73,7 @@ Ordered, structured task list from foundation through MVP. Check items off as th
 
 - [x] Schedule CRUD (date/all-day, timed, range), multiple schedules per Note — Note detail panel supports add/edit/enable/disable/delete; browser-verified across all three schedule types, including timezone display and persistence after reload
 - [ ] Recurrence rules (RRULE) + exceptions — RRULE authoring/API for daily, weekly, monthly and custom weekday/month-day patterns is implemented; bounded occurrence expansion and exception handling remain open
-- [ ] Calendar views: month/week/day/agenda — 14-day agenda and Month view are implemented; week and day views remain open
+- [ ] Calendar views: month/week/day/agenda — 14-day agenda, Month and Week views are implemented; Day view remains open
 - [ ] Timezone handling, default Asia/Jakarta
 
 ## Phase 4 — Reminder & push

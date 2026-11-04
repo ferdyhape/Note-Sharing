@@ -10,6 +10,12 @@ export function monthGridDates(monthValue: string) {
   return Array.from({ length: 42 }, (_, index) => start.add({ days: index }));
 }
 
+export function weekGridDates(dateValue: string) {
+  const date = Temporal.PlainDate.from(dateValue);
+  const start = date.subtract({ days: date.dayOfWeek - 1 });
+  return Array.from({ length: 7 }, (_, index) => start.add({ days: index }));
+}
+
 export function shiftMonth(monthValue: string, months: number) {
   return Temporal.PlainDate.from(`${monthValue.slice(0, 7)}-01`)
     .add({ months })
