@@ -1,5 +1,11 @@
+import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
-import { auth } from "@/shared/lib/auth";
+import { authConfig } from "@/shared/lib/auth.config";
+
+// A separate NextAuth instance built from the Edge-safe config only — never
+// import "@/shared/lib/auth" here, it pulls in Prisma/bcrypt and blows past
+// Vercel's Edge Function size limit (see WORKLOG).
+const { auth } = NextAuth(authConfig);
 
 const AUTH_PAGES = ["/login", "/register"];
 

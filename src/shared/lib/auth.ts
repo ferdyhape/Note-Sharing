@@ -1,25 +1,24 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/shared/lib/prisma";
+import { authConfig } from "@/shared/lib/auth.config";
 
+// Full config, Node runtime only (API routes, Server Components) — the
+// Prisma adapter and real Credentials authorize() belong here, not in
+// auth.config.ts, so middleware's Edge bundle never pulls them in.
+//
 // Auth.js forces JWT sessions whenever a Credentials provider is present
 // (database sessions aren't supported for it) — ADR-0009 decided both
 // email+password and Google, so this applies even though Google alone
 // could use database sessions.
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
-  // Vercel sits behind a proxy; without this Auth.js v5 rejects the request
-  // host as untrusted.
-  trustHost: true,
   providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    }),
+    authConfig.providers[0],
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
@@ -41,17 +40,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  callbacks: {
-    jwt({ token, user }) {
-      if (user) token.id = user.id;
-      return token;
-    },
-    session({ session, token }) {
-      if (session.user) session.user.id = token.id as string;
-      return session;
-    },
-  },
-  pages: {
-    signIn: "/login",
-  },
 });
