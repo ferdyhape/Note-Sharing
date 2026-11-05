@@ -59,7 +59,8 @@ Chosen over a Laravel backend and over self-hosting on the existing VPS: the VPS
 - Use RRULE-like recurrence rules with explicit DTSTART/timezone and exception records.
 - Generate occurrences for requested calendar windows; do not permanently create an unbounded number of future rows.
 - Materialize a bounded horizon of reminder trigger instances for efficient job processing.
-- Define behavior for daylight-saving transitions, monthly dates that do not exist, and edits to a recurring series.
+- Per ADR-0010, skip occurrences in daylight-saving gaps without consuming RRULE `COUNT`; for overlaps, choose the earlier instant. Define behavior for edits to a recurring series before enabling occurrence-specific editing.
+- Still decide whether a monthly rule on a missing date (for example, the 31st) skips that month or moves to its last day, and document the choice before implementing that behavior.
 
 ## 5. Reminder processing
 

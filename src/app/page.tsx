@@ -1,9 +1,5 @@
-import { AppShell } from "@/shared/components/AppShell";
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  return (
-    <AppShell active="notes">
-      <p className="text-muted">Notes list — not built yet.</p>
-    </AppShell>
-  );
+  redirect("/dashboard");
 }

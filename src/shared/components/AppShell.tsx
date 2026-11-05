@@ -14,7 +14,8 @@ import {
   SettingsIcon,
 } from "./icons/NavIcons";
 
-export type ActiveSection = "dashboard" | "notes" | "calendar" | "reminders" | "shared" | "archive";
+export type ActiveSection =
+  "dashboard" | "notes" | "calendar" | "reminders" | "shared" | "archive" | "settings";
 
 const NAV_ITEMS: Array<{
   section: ActiveSection;
@@ -40,9 +41,11 @@ const railLinkActiveClass = "bg-raised text-accent";
 
 export function AppShell({
   active = "notes",
+  shareHref,
   children,
 }: {
   active?: ActiveSection;
+  shareHref?: string;
   children: ReactNode;
 }) {
   return (
@@ -65,13 +68,15 @@ export function AppShell({
         </span>
         <span className="flex-1" />
         <ThemeToggle className="flex h-[34px] w-[34px] items-center justify-center rounded-full text-muted hover:bg-raised hover:text-text" />
-        <button
-          type="button"
-          aria-label="Share note"
-          className="flex h-[34px] w-[34px] items-center justify-center rounded-full text-muted hover:bg-raised hover:text-text"
-        >
-          <ShareIcon className="h-[17px] w-[17px]" />
-        </button>
+        {shareHref && (
+          <Link
+            href={shareHref}
+            aria-label="Share note"
+            className="flex h-[34px] w-[34px] items-center justify-center rounded-full text-muted hover:bg-raised hover:text-text"
+          >
+            <ShareIcon className="h-[17px] w-[17px]" />
+          </Link>
+        )}
       </header>
 
       {/* Desktop icon rail */}
@@ -109,7 +114,13 @@ export function AppShell({
         ))}
         <div className="mt-auto flex flex-col items-center gap-1">
           <ThemeToggle className={railLinkClass} />
-          <Link href="/settings" title="Settings" aria-label="Settings" className={railLinkClass}>
+          <Link
+            href="/settings"
+            title="Settings"
+            aria-label="Settings"
+            aria-current={active === "settings" ? "page" : undefined}
+            className={`${railLinkClass} ${active === "settings" ? railLinkActiveClass : ""}`}
+          >
             <SettingsIcon />
           </Link>
           <Link
@@ -153,8 +164,9 @@ export function AppShell({
         })}
         <Link
           href="/settings"
+          aria-current={active === "settings" ? "page" : undefined}
           className={`flex flex-col items-center gap-[3px] rounded-lg px-2.5 py-1 text-[11px] no-underline [&_svg]:h-[19px] [&_svg]:w-[19px] ${
-            active === "dashboard" ? "text-accent" : "text-muted"
+            active === "settings" ? "text-accent" : "text-muted"
           }`}
         >
           <SettingsIcon />

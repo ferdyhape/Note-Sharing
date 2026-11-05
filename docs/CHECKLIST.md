@@ -42,7 +42,7 @@ Ordered, structured task list from foundation through MVP. Check items off as th
 - [x] Note detail screen (editor + properties + schedule + reminder + sharing) built standalone, 10 direction options compared, merged into `design/note-detail/final-notula.html` (dark/light toggle)
 - [x] Design tokens drafted (DTCG JSON) extracted from `final-notula.html` (`src/shared/design-tokens/`)
 - [x] `final-notula.html` approved as the visual baseline (icon-rail shell, row-based tidy layout, hemat accent, light/dark toggle)
-- [ ] Remaining core screens (Calendar, standalone Reminders list, Dashboard/All Notes) designed just-in-time within the phase that builds them, not upfront
+- [x] Remaining core screens (Calendar, standalone Reminders list, Dashboard/All Notes) built just-in-time within their phases
 
 ## Phase 1 — Notes foundation
 
@@ -50,14 +50,14 @@ Ordered, structured task list from foundation through MVP. Check items off as th
   - [x] Auth.js wired (`src/shared/lib/auth.ts`): Credentials (bcrypt) + Google providers, Prisma adapter, JWT sessions, `trustHost` for Vercel
   - [x] `POST /api/auth/register` (email+password sign-up), validated via shared `src/shared/lib/validation/auth.ts`
   - [x] Sign-in / sign-up pages (`src/app/login`, `src/app/register`)
-  - [ ] Google OAuth exercised end-to-end (local `.env` still has empty `GOOGLE_CLIENT_ID`/`SECRET` — only set in Vercel so far; credentials path is verified)
+  - [ ] Google OAuth exercised end-to-end (local client credentials are present, but a real Google account/consent flow has not been run)
   - [x] `NEXTAUTH_SECRET`/`NEXTAUTH_URL` set in Vercel
 - [x] Private Note CRUD — end-to-end verified: create → edit title+body → autosave → reload persists → shows in list
   - [x] `GET/POST /api/notes`, `GET/PATCH/DELETE /api/notes/[id]` — ownership + share-role checked before every read (`src/shared/lib/note-access.ts`), DELETE is owner-only, soft delete via `deletedAt`
   - [x] Note editor / list UI (`src/app/notes/page.tsx`, `src/app/notes/[id]/page.tsx`)
 - [x] Rich editor (TipTap) wired to Note content (`src/shared/components/RichEditor.tsx`, StarterKit)
 - [x] Autosave with visible save state (`NoteEditorClient.tsx` — debounced, accumulates pending field changes so a title edit followed quickly by a body edit doesn't drop the title; fixed a real bug here, see WORKLOG)
-- [ ] Note search, archive (listing itself works; no search box or archive action in the UI yet — the API already supports a `status` filter)
+- [x] Note search, archive — server-side title/body search preserves table/property filters; Archive/Restore actions use the existing status API and `/archive` lists archived Notes
 - [x] App shell UI (`src/shared/components/AppShell.tsx`, `ThemeToggle.tsx`) — icon rail (desktop) / top bar + bottom nav (mobile), ported from `final-notula.html`; verified in both dev and a real `next build && next start`, light and dark, desktop and mobile
 
 ## Phase 2 — Dynamic properties
@@ -67,35 +67,35 @@ Ordered, structured task list from foundation through MVP. Check items off as th
 - [x] Property value change history (`note_property_value_history`) — superseded value written in the same `$transaction` as the upsert; `GET .../history`; verified in browser (editing a value then opening History shows the prior value with author + timestamp)
 - [x] Table projection view — `/notes?view=table`, columns are the union of property names across the user's Notes, missing properties render as empty cells (01_PRD.md's table-view rule), verified in browser
 - [x] Property-based filtering — `/notes?view=table&property=<name>&q=<substring>` (plain GET form, no JS), verified both a matching and a non-matching filter in browser
-- [ ] Attachment property type stores metadata only (`valueJson`) — no file upload/object storage yet (known gap, not required for Phase 2)
+- [ ] Attachment property type stores metadata only (`valueJson`) — no file upload/object storage yet; R2/S3 credentials are not configured locally
 
 ## Phase 3 — Scheduling & Calendar
 
-- [ ] Schedule CRUD (date/all-day, timed, range), multiple schedules per Note
-- [ ] Recurrence rules (RRULE) + exceptions
-- [ ] Calendar views: month/week/day/agenda
-- [ ] Timezone handling, default Asia/Jakarta
+- [x] Schedule CRUD (date/all-day, timed, range), multiple schedules per Note — Note detail panel supports add/edit/enable/disable/delete; browser-verified across all three schedule types, including timezone display and persistence after reload
+- [ ] Recurrence rules (RRULE) + exceptions — RRULE authoring/API, bounded expansion, SKIP and one-occurrence OVERRIDE are implemented; “this and following” and whole-series edits remain open
+- [x] Calendar views: month/week/day/agenda — 14-day Agenda, Month, Week and Day views implemented; browser-verified, including responsive navigation
+- [x] Timezone handling, default Asia/Jakarta — account override is editable in Settings; clearing it restores the Asia/Jakarta default for new schedules
 
 ## Phase 4 — Reminder & push
 
-- [ ] Reminder rules (schedule-linked and independent fixed-time)
-- [ ] Recipient selection scoped to Note's share list
-- [ ] In-app notification center
-- [ ] Service worker + Web Push (VAPID)
-- [ ] Reminder due-scan via Vercel Cron, idempotent delivery
+- [x] Reminder rules (schedule-linked and independent fixed-time) — Note-scoped create/edit/enable/disable/delete is implemented for fixed timestamps and enabled timed schedules
+- [x] Recipient selection scoped to Note's share list — the picker only lists existing shares and the API rejects other user IDs
+- [x] In-app notification center — user-scoped list, All/Unread filter, cursor paging, per-item and bulk read state
+- [ ] Service worker + Web Push (VAPID) — Settings opt-in/device revoke, subscription API, VAPID sender and `public/sw.js` are implemented; end-to-end push remains unverified because the smoke-test browser denied notification permission
+- [ ] Reminder due-scan via Vercel Cron, idempotent delivery — scanner and protected route are implemented/tested; production schedule is blocked on `CRON_SECRET` and a Vercel Pro/Enterprise plan for per-minute timing
 
 ## Phase 5 — Sharing & export
 
-- [ ] Owner/Editor/Viewer roles and authorization checks
-- [ ] Share invitation flow
-- [ ] XLSX/CSV/JSON export
-- [ ] Authorization/cross-user security tests
+- [x] Owner/Editor/Viewer roles and authorization checks — edit and Owner-only share-management policies are explicit; Note share grant, role change and revoke are enforced server-side
+- [x] Share invitation flow for registered accounts — Owner grants Viewer/Editor by email and the recipient receives an in-app notice; unregistered addresses must register first
+- [x] XLSX/CSV/JSON export — current filtered active Notes, selected owned Notes (up to 100), or one accessible Note; JSON preserves rich content and metadata
+- [ ] Authorization/cross-user security tests — role-policy tests and cross-user Notification/Reminder smoke checks exist; a full automated route matrix remains open
 
 ## Phase 6 — Advanced capabilities
 
-- [ ] Recurring schedule exceptions UI
-- [ ] Board/Gallery views
-- [ ] PDF/Markdown export
+- [x] Recurring schedule exceptions UI — Calendar supports Skip, Edit occurrence/override and Reset; edits are deliberately limited to one occurrence per ADR-0011
+- [x] Board/Gallery views — Board groups by a Select property (unassigned Notes stay visible); Gallery shows content excerpts, both support Note selection/export
+- [x] PDF/Markdown export — Markdown preserves supported TipTap formatting; PDF is paginated and readable, with unsupported glyphs replaced when using the built-in WinAnsi font
 - [ ] Analytics
 - [ ] Formula/Rollup properties
 
