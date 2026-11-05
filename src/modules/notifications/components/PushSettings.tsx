@@ -32,9 +32,11 @@ function deviceDate(value: string | null) {
 export function PushSettings({
   initialDevices,
   publicKey,
+  configured,
 }: {
   initialDevices: PushDeviceDTO[];
   publicKey: string;
+  configured: boolean;
 }) {
   const [devices, setDevices] = useState(initialDevices);
   const [working, setWorking] = useState(false);
@@ -52,7 +54,11 @@ export function PushSettings({
         "serviceWorker" in navigator &&
         "PushManager" in window;
       if (!supported) throw new Error("Browser push is not supported in this browser.");
-      if (!publicKey) throw new Error("Push is not configured for this deployment.");
+      if (!configured || !publicKey) {
+        throw new Error(
+          "Push needs NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT.",
+        );
+      }
       const permission = await Notification.requestPermission();
       if (permission !== "granted") throw new Error("Notification permission was not granted.");
 
@@ -125,14 +131,14 @@ export function PushSettings({
         <div className="rounded-card bg-raised p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-[13px] text-muted">
-              {publicKey
+              {configured && publicKey
                 ? "Push permission is requested only after you enable a browser."
-                : "Push is not configured for this deployment."}
+                : "Set NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT in .env or Vercel."}
             </p>
             <button
               type="button"
               onClick={() => void enablePush()}
-              disabled={working || !publicKey}
+              disabled={working || !configured || !publicKey}
               className="min-h-11 rounded-control bg-text px-3 text-[13px] font-medium text-ground disabled:cursor-not-allowed disabled:opacity-60 min-[900px]:min-h-9"
             >
               {working ? "Working…" : "Enable this browser"}

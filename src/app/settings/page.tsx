@@ -31,6 +31,11 @@ export default async function SettingsPage() {
       <PushSettings
         initialDevices={devices}
         publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ""}
+        configured={Boolean(
+          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY &&
+          process.env.VAPID_PRIVATE_KEY &&
+          process.env.VAPID_SUBJECT,
+        )}
       />
     </AppShell>
   );

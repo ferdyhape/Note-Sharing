@@ -19,6 +19,8 @@ type SearchParams = {
   groupBy?: string;
 };
 
+const NOTE_VIEWS = ["list", "table", "board", "gallery"] as const;
+
 export default async function NotesPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const session = await auth();
   // Defense in depth — middleware already protects this route.
@@ -117,18 +119,42 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-[19px] font-semibold">All Notes</h1>
         <div className="flex flex-wrap items-center gap-2">
-          {(["list", "table", "board", "gallery"] as const).map((nextView) => (
-            <Link
-              key={nextView}
-              href={notesViewHref(nextView)}
-              aria-current={
-                (nextView === "list" && !view) || nextView === view ? "page" : undefined
-              }
-              className={`rounded-card border border-border px-3 py-1.5 text-xs font-medium ${(nextView === "list" && !view) || nextView === view ? "bg-raised" : "bg-surface"}`}
+          <nav aria-label="Notes views" className="hidden items-center gap-2 min-[900px]:flex">
+            {NOTE_VIEWS.map((nextView) => (
+              <Link
+                key={nextView}
+                href={notesViewHref(nextView)}
+                aria-current={
+                  (nextView === "list" && !view) || nextView === view ? "page" : undefined
+                }
+                className={`rounded-card border border-border px-3 py-1.5 text-xs font-medium ${(nextView === "list" && !view) || nextView === view ? "bg-raised" : "bg-surface"}`}
+              >
+                {nextView[0]!.toUpperCase() + nextView.slice(1)}
+              </Link>
+            ))}
+          </nav>
+          <details className="relative min-[900px]:hidden">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center rounded-card border border-border bg-raised px-3 text-xs font-medium [&::-webkit-details-marker]:hidden">
+              View: {view ?? "list"}
+            </summary>
+            <nav
+              aria-label="Notes views"
+              className="absolute right-0 top-full z-30 mt-1 flex min-w-36 flex-col rounded-card border border-border bg-surface p-1"
             >
-              {nextView[0]!.toUpperCase() + nextView.slice(1)}
-            </Link>
-          ))}
+              {NOTE_VIEWS.map((nextView) => (
+                <Link
+                  key={nextView}
+                  href={notesViewHref(nextView)}
+                  aria-current={
+                    (nextView === "list" && !view) || nextView === view ? "page" : undefined
+                  }
+                  className="flex min-h-11 items-center rounded-control px-3 text-[13px] capitalize text-text hover:bg-raised"
+                >
+                  {nextView}
+                </Link>
+              ))}
+            </nav>
+          </details>
           <ExportActions
             search={searchQuery}
             property={filterProperty ?? ""}
@@ -170,43 +196,60 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
       </form>
 
       {columnOrder.length > 0 && (
-        <form className="mb-4 flex flex-wrap items-center gap-2" method="get">
-          {view && <input type="hidden" name="view" value={view} />}
-          {isBoardView && selectedGroupBy && (
-            <input type="hidden" name="groupBy" value={selectedGroupBy} />
-          )}
-          {searchQuery && <input type="hidden" name="search" value={searchQuery} />}
-          <select
-            name="property"
-            defaultValue={filterProperty ?? ""}
-            className="rounded-card border border-border bg-surface px-2 py-1.5 text-xs"
-          >
-            <option value="">Filter by property…</option>
-            {columnOrder.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-          <input
-            type="text"
-            name="q"
-            defaultValue={filterQuery ?? ""}
-            placeholder="Value contains…"
-            className="rounded-card border border-border bg-surface px-2 py-1.5 text-xs"
-          />
-          <button
-            type="submit"
-            className="rounded-card border border-border bg-surface px-3 py-1.5 text-xs font-medium hover:bg-raised"
-          >
-            Apply
-          </button>
-          {filterProperty && (
-            <Link href={clearSearchHref} className="text-xs text-muted underline">
-              Clear
-            </Link>
-          )}
-        </form>
+        <details className="mb-4 border-b border-rule py-2">
+          <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 text-[12px] font-medium text-text [&::-webkit-details-marker]:hidden">
+            <span>Filter by property</span>
+            <span className="text-[12px] font-normal text-muted">
+              {filterProperty ?? `${columnOrder.length} available`}
+            </span>
+          </summary>
+          <form className="mt-2 flex flex-wrap items-center gap-2" method="get">
+            {view && <input type="hidden" name="view" value={view} />}
+            {isBoardView && selectedGroupBy && (
+              <input type="hidden" name="groupBy" value={selectedGroupBy} />
+            )}
+            {searchQuery && <input type="hidden" name="search" value={searchQuery} />}
+            <select
+              name="property"
+              defaultValue={filterProperty ?? ""}
+              className="rounded-card border border-border bg-surface px-2 py-1.5 text-xs"
+            >
+              <option value="">All properties</option>
+              {columnOrder.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+            <input
+              type="text"
+              name="q"
+              defaultValue={filterQuery ?? ""}
+              placeholder="Value contains…"
+              className="rounded-card border border-border bg-surface px-2 py-1.5 text-xs"
+            />
+            <button
+              type="submit"
+              className="rounded-card border border-border bg-surface px-3 py-1.5 text-xs font-medium hover:bg-raised"
+            >
+              Apply
+            </button>
+            {filterProperty && (
+              <Link href={clearSearchHref} className="text-xs text-muted underline">
+                Clear
+              </Link>
+            )}
+          </form>
+        </details>
+      )}
+
+      {filteredNotes.length > 0 && (
+        <ExportSelectionForm
+          notes={filteredNotes.map(({ id, title }) => ({ id, title }))}
+          search={searchQuery}
+          property={filterProperty ?? ""}
+          query={filterQuery ?? ""}
+        />
       )}
 
       {filteredNotes.length === 0 ? (
@@ -255,221 +298,157 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
                   Apply
                 </button>
               </form>
-              <ExportSelectionForm
-                search={searchQuery}
-                property={filterProperty ?? ""}
-                query={filterQuery ?? ""}
-              >
-                <div className="flex gap-4 overflow-x-auto pb-2">
-                  {boardGroups.map((group) => (
-                    <section
-                      key={group.value}
-                      className="w-[240px] flex-none border-r border-rule pr-4"
-                    >
-                      <h2 className="mb-2 flex items-center justify-between text-[13px] font-medium">
-                        {group.label}
-                        <span className="text-[12px] text-muted">{group.notes.length}</span>
-                      </h2>
-                      <ul className="flex flex-col gap-2">
-                        {group.notes.map((note) => (
-                          <li
-                            key={note.id}
-                            className="rounded-card border border-border bg-surface p-3"
-                          >
-                            <div className="flex items-start gap-2">
-                              <input
-                                type="checkbox"
-                                name="noteIds"
-                                value={note.id}
-                                aria-label={`Select ${note.title} for export`}
-                              />
-                              <Link
-                                href={`/notes/${note.id}`}
-                                className="min-w-0 flex-1 text-[13px] font-medium hover:underline"
-                              >
-                                {note.title}
-                              </Link>
-                            </div>
-                            {note.contentText && (
-                              <p className="mt-2 line-clamp-3 text-[12px] text-muted">
-                                {note.contentText}
-                              </p>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
-                  ))}
-                  {boardUnassigned.length > 0 && (
-                    <section className="w-[240px] flex-none border-r border-rule pr-4">
-                      <h2 className="mb-2 flex items-center justify-between text-[13px] font-medium">
-                        No value
-                        <span className="text-[12px] text-muted">{boardUnassigned.length}</span>
-                      </h2>
-                      <ul className="flex flex-col gap-2">
-                        {boardUnassigned.map((note) => (
-                          <li
-                            key={note.id}
-                            className="rounded-card border border-border bg-surface p-3"
-                          >
-                            <div className="flex items-start gap-2">
-                              <input
-                                type="checkbox"
-                                name="noteIds"
-                                value={note.id}
-                                aria-label={`Select ${note.title} for export`}
-                              />
-                              <Link
-                                href={`/notes/${note.id}`}
-                                className="min-w-0 flex-1 text-[13px] font-medium hover:underline"
-                              >
-                                {note.title}
-                              </Link>
-                            </div>
-                            {note.contentText && (
-                              <p className="mt-2 line-clamp-3 text-[12px] text-muted">
-                                {note.contentText}
-                              </p>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
-                  )}
-                </div>
-              </ExportSelectionForm>
+              <div className="flex gap-4 overflow-x-auto pb-2">
+                {boardGroups.map((group) => (
+                  <section
+                    key={group.value}
+                    className="w-[240px] flex-none border-r border-rule pr-4"
+                  >
+                    <h2 className="mb-2 flex items-center justify-between text-[13px] font-medium">
+                      {group.label}
+                      <span className="text-[12px] text-muted">{group.notes.length}</span>
+                    </h2>
+                    <ul className="flex flex-col gap-2">
+                      {group.notes.map((note) => (
+                        <li
+                          key={note.id}
+                          className="rounded-card border border-border bg-surface p-3"
+                        >
+                          <div className="flex items-start gap-2">
+                            <Link
+                              href={`/notes/${note.id}`}
+                              className="min-w-0 flex-1 text-[13px] font-medium hover:underline"
+                            >
+                              {note.title}
+                            </Link>
+                          </div>
+                          {note.contentText && (
+                            <p className="mt-2 line-clamp-3 text-[12px] text-muted">
+                              {note.contentText}
+                            </p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+                {boardUnassigned.length > 0 && (
+                  <section className="w-[240px] flex-none border-r border-rule pr-4">
+                    <h2 className="mb-2 flex items-center justify-between text-[13px] font-medium">
+                      No value
+                      <span className="text-[12px] text-muted">{boardUnassigned.length}</span>
+                    </h2>
+                    <ul className="flex flex-col gap-2">
+                      {boardUnassigned.map((note) => (
+                        <li
+                          key={note.id}
+                          className="rounded-card border border-border bg-surface p-3"
+                        >
+                          <div className="flex items-start gap-2">
+                            <Link
+                              href={`/notes/${note.id}`}
+                              className="min-w-0 flex-1 text-[13px] font-medium hover:underline"
+                            >
+                              {note.title}
+                            </Link>
+                          </div>
+                          {note.contentText && (
+                            <p className="mt-2 line-clamp-3 text-[12px] text-muted">
+                              {note.contentText}
+                            </p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+              </div>
             </>
           )}
         </>
       ) : isGalleryView ? (
-        <ExportSelectionForm
-          search={searchQuery}
-          property={filterProperty ?? ""}
-          query={filterQuery ?? ""}
-        >
-          <ul className="grid grid-cols-1 gap-3 min-[640px]:grid-cols-2 min-[1100px]:grid-cols-3">
-            {filteredNotes.map((note) => (
-              <li key={note.id} className="rounded-card border border-border bg-surface p-4">
-                <div className="flex items-start gap-2">
-                  <input
-                    type="checkbox"
-                    name="noteIds"
-                    value={note.id}
-                    aria-label={`Select ${note.title} for export`}
-                  />
-                  <Link
-                    href={`/notes/${note.id}`}
-                    className="min-w-0 flex-1 text-[14px] font-medium hover:underline"
-                  >
-                    {note.title}
-                  </Link>
-                </div>
-                {note.contentText && (
-                  <p className="mt-3 line-clamp-5 text-[13px] text-muted">{note.contentText}</p>
-                )}
-                <p className="mt-3 text-[12px] text-muted">
-                  Updated{" "}
-                  {note.updatedAt.toLocaleDateString(undefined, { day: "numeric", month: "short" })}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </ExportSelectionForm>
-      ) : isTableView ? (
-        <ExportSelectionForm
-          search={searchQuery}
-          property={filterProperty ?? ""}
-          query={filterQuery ?? ""}
-        >
-          <div className="overflow-x-auto rounded-card border border-border">
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-border bg-surface">
-                  <th className="px-2 py-2 text-left font-medium">
-                    <span className="sr-only">Select</span>
-                  </th>
-                  <th className="whitespace-nowrap px-3 py-2 text-left font-medium">Title</th>
-                  {columnOrder.map((name) => (
-                    <th key={name} className="whitespace-nowrap px-3 py-2 text-left font-medium">
-                      {name}
-                    </th>
-                  ))}
-                  <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredNotes.map((note) => (
-                  <tr
-                    key={note.id}
-                    className="border-b border-border last:border-0 hover:bg-raised"
-                  >
-                    <td className="px-2 py-2">
-                      <input
-                        type="checkbox"
-                        name="noteIds"
-                        value={note.id}
-                        aria-label={`Select ${note.title} for export`}
-                      />
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2">
-                      <Link href={`/notes/${note.id}`} className="font-medium hover:underline">
-                        {note.title}
-                      </Link>
-                    </td>
-                    {columnOrder.map((name) => {
-                      const prop = note.properties.find((p) => p.name === name);
-                      return (
-                        <td key={name} className="whitespace-nowrap px-3 py-2 text-muted">
-                          {prop ? formatPropertyValue(prop.type, prop.values[0]) : ""}
-                        </td>
-                      );
-                    })}
-                    <td className="whitespace-nowrap px-3 py-1 text-right">
-                      <NoteStatusButton noteId={note.id} status="ACTIVE" />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </ExportSelectionForm>
-      ) : (
-        <ExportSelectionForm
-          search={searchQuery}
-          property={filterProperty ?? ""}
-          query={filterQuery ?? ""}
-        >
-          <ul className="flex flex-col gap-2">
-            {filteredNotes.map((note) => (
-              <li
-                key={note.id}
-                className="flex items-center justify-between gap-3 rounded-card border border-border bg-surface px-4 py-2"
-              >
-                <label className="flex min-h-11 items-center pr-2">
-                  <input
-                    type="checkbox"
-                    name="noteIds"
-                    value={note.id}
-                    aria-label={`Select ${note.title} for export`}
-                  />
-                </label>
+        <ul className="grid grid-cols-1 gap-3 min-[640px]:grid-cols-2 min-[1100px]:grid-cols-3">
+          {filteredNotes.map((note) => (
+            <li key={note.id} className="rounded-card border border-border bg-surface p-4">
+              <div className="flex items-start gap-2">
                 <Link
                   href={`/notes/${note.id}`}
-                  className="flex min-h-11 min-w-0 flex-1 items-center justify-between gap-3 py-2 hover:underline"
+                  className="min-w-0 flex-1 text-[14px] font-medium hover:underline"
                 >
-                  <span className="truncate text-sm font-medium">{note.title}</span>
-                  <span className="text-xs text-muted">
-                    {note.updatedAt.toLocaleDateString(undefined, {
-                      day: "numeric",
-                      month: "short",
-                    })}
-                  </span>
+                  {note.title}
                 </Link>
-                <NoteStatusButton noteId={note.id} status="ACTIVE" />
-              </li>
-            ))}
-          </ul>
-        </ExportSelectionForm>
+              </div>
+              {note.contentText && (
+                <p className="mt-3 line-clamp-5 text-[13px] text-muted">{note.contentText}</p>
+              )}
+              <p className="mt-3 text-[12px] text-muted">
+                Updated{" "}
+                {note.updatedAt.toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+              </p>
+            </li>
+          ))}
+        </ul>
+      ) : isTableView ? (
+        <div className="overflow-x-auto rounded-card border border-border">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-border bg-surface">
+                <th className="whitespace-nowrap px-3 py-2 text-left font-medium">Title</th>
+                {columnOrder.map((name) => (
+                  <th key={name} className="whitespace-nowrap px-3 py-2 text-left font-medium">
+                    {name}
+                  </th>
+                ))}
+                <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredNotes.map((note) => (
+                <tr key={note.id} className="border-b border-border last:border-0 hover:bg-raised">
+                  <td className="whitespace-nowrap px-3 py-2">
+                    <Link href={`/notes/${note.id}`} className="font-medium hover:underline">
+                      {note.title}
+                    </Link>
+                  </td>
+                  {columnOrder.map((name) => {
+                    const prop = note.properties.find((p) => p.name === name);
+                    return (
+                      <td key={name} className="whitespace-nowrap px-3 py-2 text-muted">
+                        {prop ? formatPropertyValue(prop.type, prop.values[0]) : ""}
+                      </td>
+                    );
+                  })}
+                  <td className="whitespace-nowrap px-3 py-1 text-right">
+                    <NoteStatusButton noteId={note.id} status="ACTIVE" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {filteredNotes.map((note) => (
+            <li
+              key={note.id}
+              className="flex items-center justify-between gap-3 rounded-card border border-border bg-surface px-4 py-2"
+            >
+              <Link
+                href={`/notes/${note.id}`}
+                className="flex min-h-11 min-w-0 flex-1 items-center justify-between gap-3 py-2 hover:underline"
+              >
+                <span className="truncate text-sm font-medium">{note.title}</span>
+                <span className="text-xs text-muted">
+                  {note.updatedAt.toLocaleDateString(undefined, {
+                    day: "numeric",
+                    month: "short",
+                  })}
+                </span>
+              </Link>
+              <NoteStatusButton noteId={note.id} status="ACTIVE" />
+            </li>
+          ))}
+        </ul>
       )}
     </AppShell>
   );

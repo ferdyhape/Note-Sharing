@@ -106,14 +106,48 @@ export function AppShell({
     <div className="flex min-h-dvh flex-col min-[900px]:flex-row">
       {/* Mobile top bar */}
       <header className="flex h-[52px] items-center gap-2.5 border-b border-rule px-4 min-[900px]:hidden">
-        <button
-          type="button"
-          // TODO: open a nav sheet with the same links as the rail — not built yet.
-          aria-label="Open menu"
-          className="flex h-[34px] w-[34px] items-center justify-center rounded-full text-text hover:bg-raised"
-        >
-          <MenuIcon className="h-[18px] w-[18px]" />
-        </button>
+        <details className="relative">
+          <summary
+            aria-label="Open menu"
+            className="flex h-[34px] w-[34px] cursor-pointer list-none items-center justify-center rounded-full text-text hover:bg-raised [&::-webkit-details-marker]:hidden"
+          >
+            <MenuIcon className="h-[18px] w-[18px]" />
+          </summary>
+          <nav
+            aria-label="Mobile menu"
+            className="absolute left-0 top-full z-30 mt-2 flex w-56 flex-col gap-1 rounded-card border border-border bg-surface p-2"
+          >
+            {NAV_ITEMS.map(({ section, label, href, Icon }) => (
+              <Link
+                key={section}
+                href={href}
+                aria-current={active === section ? "page" : undefined}
+                className={`flex min-h-11 items-center gap-3 rounded-control px-3 text-[13px] ${active === section ? "bg-raised text-accent" : "text-text hover:bg-raised"}`}
+              >
+                <Icon />
+                {label}
+              </Link>
+            ))}
+            <Link
+              href="/settings"
+              aria-current={active === "settings" ? "page" : undefined}
+              className={`flex min-h-11 items-center gap-3 rounded-control px-3 text-[13px] ${active === "settings" ? "bg-raised text-accent" : "text-text hover:bg-raised"}`}
+            >
+              <SettingsIcon />
+              Settings
+            </Link>
+            <Link
+              href="/account"
+              aria-current={active === "account" ? "page" : undefined}
+              className={`flex min-h-11 items-center gap-3 rounded-control px-3 text-[13px] ${active === "account" ? "bg-raised text-accent" : "text-text hover:bg-raised"}`}
+            >
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-raised text-[11px] font-semibold">
+                {accountInitial}
+              </span>
+              {accountLabel ?? "Account"}
+            </Link>
+          </nav>
+        </details>
         <span className="flex items-center gap-2 text-[15px] font-semibold">
           <span className="flex h-[22px] w-[22px] items-center justify-center rounded-md bg-accent text-xs font-bold text-white">
             N
@@ -225,6 +259,17 @@ export function AppShell({
 
       <main className="flex-1 px-4 pb-[84px] pt-4 min-[900px]:max-w-[1320px] min-[900px]:px-10 min-[900px]:py-8">
         {children}
+        <footer className="mt-10 border-t border-rule pt-3 text-right text-[11px] text-muted">
+          by{" "}
+          <a
+            href="https://ferdyhape.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-2 hover:text-text"
+          >
+            ferdyhape
+          </a>
+        </footer>
       </main>
 
       {/* Mobile bottom nav */}
