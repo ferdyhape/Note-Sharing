@@ -59,6 +59,7 @@ Ordered, structured task list from foundation through MVP. Check items off as th
 - [x] Autosave with visible save state (`NoteEditorClient.tsx` — debounced, accumulates pending field changes so a title edit followed quickly by a body edit doesn't drop the title; fixed a real bug here, see WORKLOG)
 - [x] Note search, archive — server-side title/body search preserves table/property filters; Archive/Restore actions use the existing status API and `/archive` lists archived Notes
 - [x] App shell UI (`src/shared/components/AppShell.tsx`, `ThemeToggle.tsx`) — icon rail (desktop) / top bar + bottom nav (mobile), ported from `final-notula.html`; verified in both dev and a real `next build && next start`, light and dark, desktop and mobile
+- [x] Desktop sidebar expand/collapse (2026-11-05) — the icon-only rail now has a toggle (persisted in `localStorage`) into a labeled sidebar, since icon-only was reported unclear; `/account` page built (name, email, sign out) — the rail's account avatar linked there from the start but the page never existed (404)
 
 ## Phase 2 — Dynamic properties
 

@@ -29,7 +29,13 @@ function getServerSnapshot() {
   return false;
 }
 
-export function ThemeToggle({ className }: { className?: string }) {
+export function ThemeToggle({
+  className,
+  showLabel = false,
+}: {
+  className?: string;
+  showLabel?: boolean;
+}) {
   const isDark = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   function toggle() {
@@ -52,10 +58,11 @@ export function ThemeToggle({ className }: { className?: string }) {
       className={className}
     >
       {isDark ? (
-        <MoonIcon className="h-[17px] w-[17px]" />
+        <MoonIcon className="h-[17px] w-[17px] flex-none" />
       ) : (
-        <SunIcon className="h-[17px] w-[17px]" />
+        <SunIcon className="h-[17px] w-[17px] flex-none" />
       )}
+      {showLabel && (isDark ? "Light mode" : "Dark mode")}
     </button>
   );
 }

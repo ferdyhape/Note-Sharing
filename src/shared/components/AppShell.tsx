@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
+import { useSession } from "next-auth/react";
 import { ThemeToggle } from "./ThemeToggle";
 import { ShareIcon, MenuIcon } from "./icons/ActionIcons";
 import {
@@ -15,7 +16,7 @@ import {
 } from "./icons/NavIcons";
 
 export type ActiveSection =
-  "dashboard" | "notes" | "calendar" | "reminders" | "shared" | "archive" | "settings";
+  "dashboard" | "notes" | "calendar" | "reminders" | "shared" | "archive" | "settings" | "account";
 
 const NAV_ITEMS: Array<{
   section: ActiveSection;
@@ -36,8 +37,47 @@ const NAV_ITEMS: Array<{
 const BOTTOM_NAV_ITEMS: ActiveSection[] = ["notes", "calendar", "reminders", "shared"];
 
 const railLinkClass =
-  "flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-raised hover:text-text [&_svg]:h-[17px] [&_svg]:w-[17px]";
+  "flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-raised hover:text-text [&_svg]:h-[17px] [&_svg]:w-[17px] [&_svg]:flex-none";
+const railLinkExpandedClass = "w-full justify-start gap-2.5 px-2.5 text-[13px] font-medium";
 const railLinkActiveClass = "bg-raised text-accent";
+
+const SIDEBAR_STORAGE_KEY = "notula-sidebar-expanded";
+
+// Same useSyncExternalStore-over-localStorage pattern as ThemeToggle.tsx:
+// localStorage is external state, so it's read via a subscription rather
+// than useState+useEffect (which React flags — set-state-in-effect).
+const sidebarListeners = new Set<() => void>();
+
+function getSidebarSnapshot() {
+  try {
+    return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function getSidebarServerSnapshot() {
+  return false;
+}
+
+function subscribeSidebar(callback: () => void) {
+  sidebarListeners.add(callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    sidebarListeners.delete(callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+
+function setSidebarExpanded(next: boolean) {
+  try {
+    localStorage.setItem(SIDEBAR_STORAGE_KEY, next ? "1" : "0");
+  } catch {
+    // Storage blocked — the toggle still works for this page load, it just
+    // won't persist or sync to other tabs.
+  }
+  sidebarListeners.forEach((callback) => callback());
+}
 
 export function AppShell({
   active = "notes",
@@ -48,6 +88,20 @@ export function AppShell({
   shareHref?: string;
   children: ReactNode;
 }) {
+  const { data: session } = useSession();
+  const expanded = useSyncExternalStore(
+    subscribeSidebar,
+    getSidebarSnapshot,
+    getSidebarServerSnapshot,
+  );
+
+  function toggleExpanded() {
+    setSidebarExpanded(!expanded);
+  }
+
+  const accountLabel = session?.user?.name ?? session?.user?.email ?? null;
+  const accountInitial = accountLabel ? accountLabel.charAt(0).toUpperCase() : "?";
+
   return (
     <div className="flex min-h-dvh flex-col min-[900px]:flex-row">
       {/* Mobile top bar */}
@@ -79,14 +133,32 @@ export function AppShell({
         )}
       </header>
 
-      {/* Desktop icon rail */}
+      {/* Desktop icon rail — toggles into a labeled sidebar via the expand
+          button, since icon-only was reported unclear. */}
       <nav
         aria-label="Primary"
-        className="sticky top-0 hidden h-dvh w-[var(--rail-width)] flex-none flex-col items-center gap-1 border-r border-rule py-4 min-[900px]:flex"
+        className={`sticky top-0 hidden h-dvh flex-none flex-col gap-1 border-r border-rule py-4 min-[900px]:flex ${
+          expanded ? "w-[200px] items-stretch px-2.5" : "w-[var(--rail-width)] items-center"
+        }`}
       >
-        <span className="mb-[18px] flex h-[30px] w-[30px] items-center justify-center rounded-lg bg-accent text-sm font-bold text-white">
-          N
-        </span>
+        <div
+          className={`mb-[18px] flex items-center gap-2.5 ${expanded ? "px-2.5" : "flex-col gap-2"}`}
+        >
+          <span className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-lg bg-accent text-sm font-bold text-white">
+            N
+          </span>
+          {expanded && <span className="text-[15px] font-semibold">Notula</span>}
+          <button
+            type="button"
+            onClick={toggleExpanded}
+            aria-pressed={expanded}
+            aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
+            title={expanded ? "Collapse sidebar" : "Expand sidebar"}
+            className={`flex h-7 w-7 flex-none items-center justify-center rounded-lg text-muted hover:bg-raised hover:text-text ${expanded ? "ml-auto" : ""}`}
+          >
+            <MenuIcon className="h-[15px] w-[15px]" />
+          </button>
+        </div>
         {NAV_ITEMS.slice(0, 4).map(({ section, label, href, Icon }) => (
           <Link
             key={section}
@@ -94,9 +166,10 @@ export function AppShell({
             title={label}
             aria-label={label}
             aria-current={active === section ? "page" : undefined}
-            className={`${railLinkClass} ${active === section ? railLinkActiveClass : ""}`}
+            className={`${railLinkClass} ${expanded ? railLinkExpandedClass : ""} ${active === section ? railLinkActiveClass : ""}`}
           >
             <Icon />
+            {expanded && label}
           </Link>
         ))}
         <div className="h-[18px]" />
@@ -107,28 +180,45 @@ export function AppShell({
             title={label}
             aria-label={label}
             aria-current={active === section ? "page" : undefined}
-            className={`${railLinkClass} ${active === section ? railLinkActiveClass : ""}`}
+            className={`${railLinkClass} ${expanded ? railLinkExpandedClass : ""} ${active === section ? railLinkActiveClass : ""}`}
           >
             <Icon />
+            {expanded && label}
           </Link>
         ))}
-        <div className="mt-auto flex flex-col items-center gap-1">
-          <ThemeToggle className={railLinkClass} />
+        <div
+          className={`mt-auto flex flex-col gap-1 ${expanded ? "items-stretch" : "items-center"}`}
+        >
+          <ThemeToggle
+            className={`${railLinkClass} ${expanded ? railLinkExpandedClass : ""}`}
+            showLabel={expanded}
+          />
           <Link
             href="/settings"
             title="Settings"
             aria-label="Settings"
             aria-current={active === "settings" ? "page" : undefined}
-            className={`${railLinkClass} ${active === "settings" ? railLinkActiveClass : ""}`}
+            className={`${railLinkClass} ${expanded ? railLinkExpandedClass : ""} ${active === "settings" ? railLinkActiveClass : ""}`}
           >
             <SettingsIcon />
+            {expanded && "Settings"}
           </Link>
           <Link
             href="/account"
             title="Account"
-            className="flex h-[27px] w-[27px] items-center justify-center rounded-full bg-raised text-[11px] font-semibold text-text"
+            aria-current={active === "account" ? "page" : undefined}
+            className={`flex items-center gap-2.5 rounded-lg text-[13px] font-medium hover:bg-raised ${
+              active === "account" ? "text-accent" : "text-text"
+            } ${expanded ? "px-2.5 py-1.5" : "h-9 w-9 justify-center"}`}
           >
-            F
+            <span
+              className={`flex h-[27px] w-[27px] flex-none items-center justify-center rounded-full text-[11px] font-semibold ${
+                active === "account" ? "bg-accent text-white" : "bg-raised"
+              }`}
+            >
+              {accountInitial}
+            </span>
+            {expanded && (accountLabel ?? "Account")}
           </Link>
         </div>
       </nav>
