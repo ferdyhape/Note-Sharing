@@ -79,7 +79,7 @@ Ordered, structured task list from foundation through MVP. Check items off as th
 ## Phase 4 — Reminder & push
 
 - [x] Reminder rules (schedule-linked and independent fixed-time) — Note-scoped create/edit/enable/disable/delete is implemented for fixed timestamps and enabled timed schedules
-- [x] Recipient selection scoped to Note's share list — the picker only lists existing shares and the API rejects other user IDs
+- [x] Recipient selection scoped to Note's owner + share list — the picker lists the owner (who never has a `NoteShare` row, ADR-0003) plus existing shares, and the API rejects any other user ID (fixed 2026-11-05: Copilot's original version required a `NoteShare` row for every recipient, which silently excluded the owner and broke reminders on any un-shared Note — see WORKLOG)
 - [x] In-app notification center — user-scoped list, All/Unread filter, cursor paging, per-item and bulk read state
 - [ ] Service worker + Web Push (VAPID) — Settings opt-in/device revoke, subscription API, VAPID sender and `public/sw.js` are implemented; end-to-end push remains unverified because the smoke-test browser denied notification permission
 - [ ] Reminder due-scan via Vercel Cron, idempotent delivery — scanner and protected route are implemented/tested; production schedule is blocked on `CRON_SECRET` and a Vercel Pro/Enterprise plan for per-minute timing

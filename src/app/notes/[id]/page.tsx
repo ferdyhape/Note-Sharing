@@ -31,7 +31,7 @@ export default async function NoteDetailPage({ params }: { params: Promise<{ id:
         id: true,
         title: true,
         contentJson: true,
-        owner: { select: { name: true, email: true } },
+        owner: { select: { id: true, name: true, email: true } },
       },
     }),
     prisma.noteProperty.findMany({
@@ -109,11 +109,16 @@ export default async function NoteDetailPage({ params }: { params: Promise<{ id:
         initialReminders={JSON.parse(JSON.stringify(reminders)) as ReminderDTO[]}
         schedules={JSON.parse(JSON.stringify(schedules)) as ScheduleDTO[]}
         recipients={
-          recipientShares.map((share) => ({
-            userId: share.user.id,
-            name: share.user.name,
-            role: share.role,
-          })) as ReminderRecipientOption[]
+          [
+            // The owner never has a NoteShare row (ADR-0003) but is always a
+            // valid reminder recipient on their own Note — FR-012.
+            { userId: note.owner.id, name: note.owner.name, role: "OWNER" },
+            ...recipientShares.map((share) => ({
+              userId: share.user.id,
+              name: share.user.name,
+              role: share.role,
+            })),
+          ] as ReminderRecipientOption[]
         }
         timezone={scheduleTimezone}
         canEdit={canEdit(access)}

@@ -8,14 +8,20 @@ type CollectionRouteParams = { params: Promise<{ id: string }> };
 type ItemRouteParams = { params: Promise<{ id: string; reminderId: string }> };
 
 async function validateRule(noteId: string, input: ReminderRuleInput) {
+  // The owner never has a NoteShare row (ADR-0003) but is always a valid
+  // recipient on their own Note — FR-012 lists Owner/Editor/Viewer alike.
+  const note = await prisma.note.findUnique({ where: { id: noteId }, select: { ownerId: true } });
+  if (!note) return apiError("not_found", "Note not found.", 404);
+
   const shares = await prisma.noteShare.findMany({
     where: { noteId, userId: { in: input.recipientUserIds } },
     select: { userId: true },
   });
-  if (shares.length !== input.recipientUserIds.length) {
+  const validRecipientIds = new Set([note.ownerId, ...shares.map((share) => share.userId)]);
+  if (!input.recipientUserIds.every((userId) => validRecipientIds.has(userId))) {
     return apiError(
       "invalid_recipient",
-      "Recipients must have access through this Note's share list.",
+      "Recipients must be the Note's owner or have access through its share list.",
       400,
     );
   }

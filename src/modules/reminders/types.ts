@@ -19,5 +19,5 @@ export type ReminderDTO = {
 export type ReminderRecipientOption = {
   userId: string;
   name: string | null;
-  role: "EDITOR" | "VIEWER";
+  role: "OWNER" | "EDITOR" | "VIEWER";
 };
