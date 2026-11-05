@@ -63,6 +63,7 @@ Ordered, structured task list from foundation through MVP. Check items off as th
 - [x] Mobile nav consolidated to one surface (2026-11-05) — removed a duplicate hamburger dropdown a follow-up commit had added to the mobile top bar; the bottom nav's "More" item now opens a popover (Dashboard, Archive, Settings, Account) instead of linking straight to Settings
 - [x] Rich editor formatting toolbar (2026-11-05) — Bold/Italic/Strike/Code, H1/H2, lists, quote; StarterKit's formatting previously had no on-screen affordance at all
 - [x] Removed unsolicited "by ferdyhape" footer branding (2026-11-05)
+- [x] Mobile usability pass across all screens (2026-11-05) — fixed undersized tap targets in `PropertiesPanel` (History/Delete/Add property), made Gallery and Board view cards fully clickable instead of title-only, bumped the mobile top bar's icon buttons to 40×40px; verified no page-level horizontal overflow on any screen at 375px (Notes list all 4 views, Note detail + all Note tools panels, Dashboard, Calendar, Archive, Reminders, Settings, Account)
 
 ## Phase 2 — Dynamic properties
 

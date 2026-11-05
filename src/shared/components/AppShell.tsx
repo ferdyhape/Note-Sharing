@@ -119,12 +119,12 @@ export function AppShell({
           Notula
         </span>
         <span className="flex-1" />
-        <ThemeToggle className="flex h-[34px] w-[34px] items-center justify-center rounded-full text-muted hover:bg-raised hover:text-text" />
+        <ThemeToggle className="flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-raised hover:text-text" />
         {shareHref && (
           <Link
             href={shareHref}
             aria-label="Share note"
-            className="flex h-[34px] w-[34px] items-center justify-center rounded-full text-muted hover:bg-raised hover:text-text"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-muted hover:bg-raised hover:text-text"
           >
             <ShareIcon className="h-[17px] w-[17px]" />
           </Link>

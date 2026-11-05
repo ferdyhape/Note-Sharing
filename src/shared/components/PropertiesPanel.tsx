@@ -17,6 +17,12 @@ const EMPTY_VALUE: ValueFields = {
   valueDate: null,
 };
 
+// 44px tap target on mobile, back to a compact 32px once a pointer is likely
+// (min-[900px], matching the icon rail's own breakpoint) — same convention
+// as SchedulePanel.tsx and ReminderPanel.tsx's ACTION_CLASS.
+const ACTION_CLASS =
+  "flex min-h-11 items-center rounded-control px-2 hover:bg-raised hover:text-text disabled:cursor-not-allowed disabled:opacity-60 min-[900px]:min-h-8";
+
 export type PropertyValueDTO = ValueFields & {
   id: string;
   propertyId: string;
@@ -575,8 +581,8 @@ function PropertyRow({
             {typeLabel}
           </span>
         </div>
-        <div className="flex shrink-0 items-center gap-2.5 text-[11px] text-muted">
-          <button type="button" onClick={() => void toggleHistory()} className="hover:text-text">
+        <div className="flex shrink-0 items-center gap-1 text-[11px] text-muted">
+          <button type="button" onClick={() => void toggleHistory()} className={ACTION_CLASS}>
             History
           </button>
           {canEdit && (
@@ -584,7 +590,7 @@ function PropertyRow({
               type="button"
               onClick={() => void handleDelete()}
               disabled={deleting}
-              className="hover:text-negative disabled:opacity-60"
+              className={`${ACTION_CLASS} hover:text-negative`}
             >
               Delete
             </button>
@@ -966,7 +972,7 @@ export function PropertiesPanel({
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="text-[12px] font-medium text-accent hover:underline"
+            className="min-h-11 px-2 text-[12px] font-medium text-accent hover:underline min-[900px]:min-h-8"
           >
             + Add property
           </button>

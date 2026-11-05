@@ -310,23 +310,17 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
                     </h2>
                     <ul className="flex flex-col gap-2">
                       {group.notes.map((note) => (
-                        <li
-                          key={note.id}
-                          className="rounded-card border border-border bg-surface p-3"
-                        >
-                          <div className="flex items-start gap-2">
-                            <Link
-                              href={`/notes/${note.id}`}
-                              className="min-w-0 flex-1 text-[13px] font-medium hover:underline"
-                            >
+                        <li key={note.id} className="rounded-card border border-border bg-surface">
+                          <Link href={`/notes/${note.id}`} className="block p-3 hover:bg-raised">
+                            <span className="block truncate text-[13px] font-medium">
                               {note.title}
-                            </Link>
-                          </div>
-                          {note.contentText && (
-                            <p className="mt-2 line-clamp-3 text-[12px] text-muted">
-                              {note.contentText}
-                            </p>
-                          )}
+                            </span>
+                            {note.contentText && (
+                              <p className="mt-2 line-clamp-3 text-[12px] text-muted">
+                                {note.contentText}
+                              </p>
+                            )}
+                          </Link>
                         </li>
                       ))}
                     </ul>
@@ -340,23 +334,17 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
                     </h2>
                     <ul className="flex flex-col gap-2">
                       {boardUnassigned.map((note) => (
-                        <li
-                          key={note.id}
-                          className="rounded-card border border-border bg-surface p-3"
-                        >
-                          <div className="flex items-start gap-2">
-                            <Link
-                              href={`/notes/${note.id}`}
-                              className="min-w-0 flex-1 text-[13px] font-medium hover:underline"
-                            >
+                        <li key={note.id} className="rounded-card border border-border bg-surface">
+                          <Link href={`/notes/${note.id}`} className="block p-3 hover:bg-raised">
+                            <span className="block truncate text-[13px] font-medium">
                               {note.title}
-                            </Link>
-                          </div>
-                          {note.contentText && (
-                            <p className="mt-2 line-clamp-3 text-[12px] text-muted">
-                              {note.contentText}
-                            </p>
-                          )}
+                            </span>
+                            {note.contentText && (
+                              <p className="mt-2 line-clamp-3 text-[12px] text-muted">
+                                {note.contentText}
+                              </p>
+                            )}
+                          </Link>
                         </li>
                       ))}
                     </ul>
@@ -369,22 +357,19 @@ export default async function NotesPage({ searchParams }: { searchParams: Promis
       ) : isGalleryView ? (
         <ul className="grid grid-cols-1 gap-3 min-[640px]:grid-cols-2 min-[1100px]:grid-cols-3">
           {filteredNotes.map((note) => (
-            <li key={note.id} className="rounded-card border border-border bg-surface p-4">
-              <div className="flex items-start gap-2">
-                <Link
-                  href={`/notes/${note.id}`}
-                  className="min-w-0 flex-1 text-[14px] font-medium hover:underline"
-                >
-                  {note.title}
-                </Link>
-              </div>
-              {note.contentText && (
-                <p className="mt-3 line-clamp-5 text-[13px] text-muted">{note.contentText}</p>
-              )}
-              <p className="mt-3 text-[12px] text-muted">
-                Updated{" "}
-                {note.updatedAt.toLocaleDateString(undefined, { day: "numeric", month: "short" })}
-              </p>
+            <li key={note.id} className="rounded-card border border-border bg-surface">
+              {/* The whole card is the tap target, not just the title line —
+                  a single line of text was a cramped target on a phone. */}
+              <Link href={`/notes/${note.id}`} className="block p-4 hover:bg-raised">
+                <span className="block truncate text-[14px] font-medium">{note.title}</span>
+                {note.contentText && (
+                  <p className="mt-3 line-clamp-5 text-[13px] text-muted">{note.contentText}</p>
+                )}
+                <p className="mt-3 text-[12px] text-muted">
+                  Updated{" "}
+                  {note.updatedAt.toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+                </p>
+              </Link>
             </li>
           ))}
         </ul>
