@@ -13,6 +13,7 @@ import {
   SharedIcon,
   ArchiveIcon,
   SettingsIcon,
+  MoreIcon,
 } from "./icons/NavIcons";
 
 export type ActiveSection =
@@ -34,7 +35,11 @@ const NAV_ITEMS: Array<{
 
 // The bottom nav (phone) shows fewer destinations than the rail (desktop) —
 // matches the icon-rail shell's own phone rule (design/note-detail/final-notula.html).
+// Everything else (Dashboard, Archive, Settings, Account) lives behind the
+// single "More" popover below, rather than duplicating a second menu
+// trigger in the top bar — one navigation surface on mobile, not two.
 const BOTTOM_NAV_ITEMS: ActiveSection[] = ["notes", "calendar", "reminders", "shared"];
+const MORE_NAV_ITEMS: ActiveSection[] = ["dashboard", "archive"];
 
 const railLinkClass =
   "flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-raised hover:text-text [&_svg]:h-[17px] [&_svg]:w-[17px] [&_svg]:flex-none";
@@ -104,50 +109,9 @@ export function AppShell({
 
   return (
     <div className="flex min-h-dvh flex-col min-[900px]:flex-row">
-      {/* Mobile top bar */}
+      {/* Mobile top bar — navigation itself lives only in the bottom nav
+          (primary 4 + "More"); no second menu trigger up here. */}
       <header className="flex h-[52px] items-center gap-2.5 border-b border-rule px-4 min-[900px]:hidden">
-        <details className="relative">
-          <summary
-            aria-label="Open menu"
-            className="flex h-[34px] w-[34px] cursor-pointer list-none items-center justify-center rounded-full text-text hover:bg-raised [&::-webkit-details-marker]:hidden"
-          >
-            <MenuIcon className="h-[18px] w-[18px]" />
-          </summary>
-          <nav
-            aria-label="Mobile menu"
-            className="absolute left-0 top-full z-30 mt-2 flex w-56 flex-col gap-1 rounded-card border border-border bg-surface p-2"
-          >
-            {NAV_ITEMS.map(({ section, label, href, Icon }) => (
-              <Link
-                key={section}
-                href={href}
-                aria-current={active === section ? "page" : undefined}
-                className={`flex min-h-11 items-center gap-3 rounded-control px-3 text-[13px] ${active === section ? "bg-raised text-accent" : "text-text hover:bg-raised"}`}
-              >
-                <Icon />
-                {label}
-              </Link>
-            ))}
-            <Link
-              href="/settings"
-              aria-current={active === "settings" ? "page" : undefined}
-              className={`flex min-h-11 items-center gap-3 rounded-control px-3 text-[13px] ${active === "settings" ? "bg-raised text-accent" : "text-text hover:bg-raised"}`}
-            >
-              <SettingsIcon />
-              Settings
-            </Link>
-            <Link
-              href="/account"
-              aria-current={active === "account" ? "page" : undefined}
-              className={`flex min-h-11 items-center gap-3 rounded-control px-3 text-[13px] ${active === "account" ? "bg-raised text-accent" : "text-text hover:bg-raised"}`}
-            >
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-raised text-[11px] font-semibold">
-                {accountInitial}
-              </span>
-              {accountLabel ?? "Account"}
-            </Link>
-          </nav>
-        </details>
         <span className="flex items-center gap-2 text-[15px] font-semibold">
           <span className="flex h-[22px] w-[22px] items-center justify-center rounded-md bg-accent text-xs font-bold text-white">
             N
@@ -259,17 +223,6 @@ export function AppShell({
 
       <main className="flex-1 px-4 pb-[84px] pt-4 min-[900px]:max-w-[1320px] min-[900px]:px-10 min-[900px]:py-8">
         {children}
-        <footer className="mt-10 border-t border-rule pt-3 text-right text-[11px] text-muted">
-          by{" "}
-          <a
-            href="https://ferdyhape.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline underline-offset-2 hover:text-text"
-          >
-            ferdyhape
-          </a>
-        </footer>
       </main>
 
       {/* Mobile bottom nav */}
@@ -297,16 +250,60 @@ export function AppShell({
             </Link>
           );
         })}
-        <Link
-          href="/settings"
-          aria-current={active === "settings" ? "page" : undefined}
-          className={`flex flex-col items-center gap-[3px] rounded-lg px-2.5 py-1 text-[11px] no-underline [&_svg]:h-[19px] [&_svg]:w-[19px] ${
-            active === "settings" ? "text-accent" : "text-muted"
-          }`}
-        >
-          <SettingsIcon />
-          More
-        </Link>
+        <details className="relative">
+          <summary
+            aria-label="More"
+            className={`flex cursor-pointer list-none flex-col items-center gap-[3px] rounded-lg px-2.5 py-1 text-[11px] [&::-webkit-details-marker]:hidden [&_svg]:h-[19px] [&_svg]:w-[19px] ${
+              active === "dashboard" ||
+              active === "archive" ||
+              active === "settings" ||
+              active === "account"
+                ? "text-accent"
+                : "text-muted"
+            }`}
+          >
+            <MoreIcon />
+            More
+          </summary>
+          <nav
+            aria-label="More"
+            className="absolute bottom-full right-0 z-30 mb-2 flex w-52 flex-col gap-1 rounded-card border border-border bg-surface p-2 shadow-lg"
+          >
+            {MORE_NAV_ITEMS.map((section) => {
+              const item = NAV_ITEMS.find((n) => n.section === section)!;
+              const Icon = item.Icon;
+              return (
+                <Link
+                  key={section}
+                  href={item.href}
+                  aria-current={active === section ? "page" : undefined}
+                  className={`flex min-h-11 items-center gap-3 rounded-control px-3 text-[13px] ${active === section ? "bg-raised text-accent" : "text-text hover:bg-raised"}`}
+                >
+                  <Icon />
+                  {item.label}
+                </Link>
+              );
+            })}
+            <Link
+              href="/settings"
+              aria-current={active === "settings" ? "page" : undefined}
+              className={`flex min-h-11 items-center gap-3 rounded-control px-3 text-[13px] ${active === "settings" ? "bg-raised text-accent" : "text-text hover:bg-raised"}`}
+            >
+              <SettingsIcon />
+              Settings
+            </Link>
+            <Link
+              href="/account"
+              aria-current={active === "account" ? "page" : undefined}
+              className={`flex min-h-11 items-center gap-3 rounded-control px-3 text-[13px] ${active === "account" ? "bg-raised text-accent" : "text-text hover:bg-raised"}`}
+            >
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-raised text-[11px] font-semibold">
+                {accountInitial}
+              </span>
+              {accountLabel ?? "Account"}
+            </Link>
+          </nav>
+        </details>
       </nav>
     </div>
   );

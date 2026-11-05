@@ -85,6 +85,17 @@ export function ArchiveIcon(props: IconProps) {
   );
 }
 
+/** Three-dot "more" glyph — the bottom-nav overflow trigger, distinct from Settings. */
+export function MoreIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="3.2" cy="8" r="1.3" fill="currentColor" />
+      <circle cx="8" cy="8" r="1.3" fill="currentColor" />
+      <circle cx="12.8" cy="8" r="1.3" fill="currentColor" />
+    </svg>
+  );
+}
+
 /** Settings glyph — deliberately sliders, not a gear-as-sun lookalike (see ADR-free note in design review). */
 export function SettingsIcon(props: IconProps) {
   return (

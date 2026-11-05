@@ -60,6 +60,9 @@ Ordered, structured task list from foundation through MVP. Check items off as th
 - [x] Note search, archive — server-side title/body search preserves table/property filters; Archive/Restore actions use the existing status API and `/archive` lists archived Notes
 - [x] App shell UI (`src/shared/components/AppShell.tsx`, `ThemeToggle.tsx`) — icon rail (desktop) / top bar + bottom nav (mobile), ported from `final-notula.html`; verified in both dev and a real `next build && next start`, light and dark, desktop and mobile
 - [x] Desktop sidebar expand/collapse (2026-11-05) — the icon-only rail now has a toggle (persisted in `localStorage`) into a labeled sidebar, since icon-only was reported unclear; `/account` page built (name, email, sign out) — the rail's account avatar linked there from the start but the page never existed (404)
+- [x] Mobile nav consolidated to one surface (2026-11-05) — removed a duplicate hamburger dropdown a follow-up commit had added to the mobile top bar; the bottom nav's "More" item now opens a popover (Dashboard, Archive, Settings, Account) instead of linking straight to Settings
+- [x] Rich editor formatting toolbar (2026-11-05) — Bold/Italic/Strike/Code, H1/H2, lists, quote; StarterKit's formatting previously had no on-screen affordance at all
+- [x] Removed unsolicited "by ferdyhape" footer branding (2026-11-05)
 
 ## Phase 2 — Dynamic properties
 
